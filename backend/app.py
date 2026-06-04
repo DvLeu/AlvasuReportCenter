@@ -10,16 +10,27 @@ Endpoints:
   GET  /api/config               lee los ajustes globales
   PUT  /api/config               actualiza ajustes (p. ej. modo_costeo)
 """
+
 import os
 from calendar import monthrange
 from datetime import date, datetime
+from sqlalchemy import inspect, text
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-from models import (db, Receta, Insumo, RecetaInsumo, PrecioInsumo,
-                    Produccion, ProduccionDetalle, Config)
+from models import (
+    db,
+    Receta,
+    Insumo,
+    RecetaInsumo,
+    PrecioInsumo,
+    Produccion,
+    ProduccionDetalle,
+    Config,
+)
 from calc import calcular
+from seed import seed_if_empty
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -28,6 +39,58 @@ app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE, "aguas
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 CORS(app)
+
+
+def ensure_schema_and_migrations():
+    with app.app_context():
+        db.create_all()
+        inspector = inspect(db.engine)
+        table_names = inspector.get_table_names()
+        if "insumos" in table_names:
+            columns = {column["name"] for column in inspector.get_columns("insumos")}
+            if "activa" not in columns:
+                db.session.execute(
+                    text("ALTER TABLE insumos ADD COLUMN activa BOOLEAN DEFAULT 1")
+                )
+                db.session.commit()
+            if "unidad_compra" not in columns:
+                db.session.execute(
+                    text("ALTER TABLE insumos ADD COLUMN unidad_compra VARCHAR")
+                )
+                db.session.execute(
+                    text(
+                        "UPDATE insumos SET unidad_compra = unidad WHERE unidad_compra IS NULL"
+                    )
+                )
+                db.session.commit()
+            if "factor_conversion" not in columns:
+                db.session.execute(
+                    text(
+                        "ALTER TABLE insumos ADD COLUMN factor_conversion FLOAT DEFAULT 1"
+                    )
+                )
+                db.session.execute(
+                    text(
+                        "UPDATE insumos SET factor_conversion = 1 WHERE factor_conversion IS NULL"
+                    )
+                )
+                db.session.commit()
+
+        if "configuracion" not in table_names or "produccion" not in table_names:
+            return
+
+        migrated = Config.query.filter_by(clave="produccion_unidad").first()
+        if not migrated:
+            for prod in Produccion.query.all():
+                rendimiento = prod.receta.rendimiento_vasos or 160
+                prod.vasos = int(prod.vasos * rendimiento)
+            db.session.add(Config(clave="produccion_unidad", valor="AGUAS"))
+            db.session.commit()
+
+        seed_if_empty()
+
+
+ensure_schema_and_migrations()
 
 
 def get_config(clave, default=None):
@@ -55,13 +118,16 @@ def parse_anio(valor):
 
 
 def precio_vigente_en(insumo_id, fecha):
-    return (PrecioInsumo.query
-            .filter(PrecioInsumo.insumo_id == insumo_id)
-            .filter(PrecioInsumo.vigente_desde <= fecha)
-            .filter((PrecioInsumo.vigente_hasta.is_(None)) |
-                    (PrecioInsumo.vigente_hasta > fecha))
-            .order_by(PrecioInsumo.vigente_desde.desc())
-            .first())
+    return (
+        PrecioInsumo.query.filter(PrecioInsumo.insumo_id == insumo_id)
+        .filter(PrecioInsumo.vigente_desde <= fecha)
+        .filter(
+            (PrecioInsumo.vigente_hasta.is_(None))
+            | (PrecioInsumo.vigente_hasta > fecha)
+        )
+        .order_by(PrecioInsumo.vigente_desde.desc())
+        .first()
+    )
 
 
 def guardar_precio_desde(insumo_id, precio, fecha):
@@ -79,12 +145,14 @@ def guardar_precio_desde(insumo_id, precio, fecha):
     if actual:
         actual.vigente_hasta = fecha
 
-    db.session.add(PrecioInsumo(
-        insumo_id=insumo_id,
-        precio=precio,
-        vigente_desde=fecha,
-        vigente_hasta=vigente_hasta,
-    ))
+    db.session.add(
+        PrecioInsumo(
+            insumo_id=insumo_id,
+            precio=precio,
+            vigente_desde=fecha,
+            vigente_hasta=vigente_hasta,
+        )
+    )
     return True
 
 
@@ -97,14 +165,16 @@ def recalcular_produccion_de_fecha(fecha):
         prod.detalles.clear()
         db.session.flush()
         for d in calc["detalles"]:
-            db.session.add(ProduccionDetalle(
-                produccion_id=prod.id,
-                insumo_id=d["insumo_id"],
-                nombre_insumo=d["nombre_insumo"],
-                cantidad=d["cantidad"],
-                precio_usado=d["precio_usado"],
-                subtotal=d["subtotal"],
-            ))
+            db.session.add(
+                ProduccionDetalle(
+                    produccion_id=prod.id,
+                    insumo_id=d["insumo_id"],
+                    nombre_insumo=d["nombre_insumo"],
+                    cantidad=d["cantidad"],
+                    precio_usado=d["precio_usado"],
+                    subtotal=d["subtotal"],
+                )
+            )
         recalculados.append(prod.id)
     return recalculados
 
@@ -118,11 +188,14 @@ def receta_json(receta):
         "rendimiento_aguas": receta.rendimiento_vasos,
         "volumen_jarra": receta.volumen_jarra,
         "activa": receta.activa,
-        "insumos": [{
-            "insumo_id": ri.insumo_id,
-            "nombre": ri.insumo.nombre,
-            "cantidad_por_jarra": ri.cantidad_por_jarra,
-        } for ri in receta.insumos],
+        "insumos": [
+            {
+                "insumo_id": ri.insumo_id,
+                "nombre": ri.insumo.nombre,
+                "cantidad_por_jarra": ri.cantidad_por_jarra,
+            }
+            for ri in receta.insumos
+        ],
     }
 
 
@@ -144,18 +217,71 @@ def sync_receta_insumos(receta, insumos):
 @app.get("/api/insumos")
 def listar_insumos():
     fecha = parse_fecha(request.args.get("fecha"))
+    incluir_inactivos = request.args.get("todas") == "1"
+    query = Insumo.query.order_by(Insumo.nombre)
+    if not incluir_inactivos:
+        query = query.filter_by(activa=True)
     out = []
-    for i in Insumo.query.order_by(Insumo.nombre).all():
+    for i in query.all():
         p = precio_vigente_en(i.id, fecha)
-        out.append({
-            "id": i.id,
-            "nombre": i.nombre,
-            "unidad": i.unidad,
-            "precio": p.precio if p else None,
-            "vigente_desde": p.vigente_desde.isoformat() if p else None,
-            "vigente_hasta": p.vigente_hasta.isoformat() if p and p.vigente_hasta else None,
-        })
+        out.append(
+            {
+                "id": i.id,
+                "nombre": i.nombre,
+                "unidad": i.unidad,
+                "unidad_compra": i.unidad_compra or i.unidad,
+                "factor_conversion": i.factor_conversion or 1,
+                "activa": i.activa,
+                "precio": p.precio if p else None,
+                "vigente_desde": p.vigente_desde.isoformat() if p else None,
+                "vigente_hasta": (
+                    p.vigente_hasta.isoformat() if p and p.vigente_hasta else None
+                ),
+            }
+        )
     return jsonify(out)
+
+
+@app.post("/api/insumos")
+def crear_insumo():
+    data = request.get_json(silent=True) or {}
+    nombre = (data.get("nombre") or "").strip()
+    unidad = (data.get("unidad") or "").strip()
+    unidad_compra = (data.get("unidad_compra") or unidad).strip()
+    factor_conversion = float(data.get("factor_conversion") or 1)
+    precio = float(data.get("precio") or 0)
+    fecha = parse_fecha(data.get("fecha"))
+    if not nombre or not unidad or not unidad_compra or factor_conversion <= 0:
+        return jsonify({"error": "Nombre, unidades y contenido son obligatorios."}), 400
+
+    insumo = Insumo(
+        nombre=nombre,
+        unidad=unidad,
+        unidad_compra=unidad_compra,
+        factor_conversion=factor_conversion,
+        activa=bool(data.get("activa", True)),
+    )
+    db.session.add(insumo)
+    db.session.flush()
+    db.session.add(
+        PrecioInsumo(insumo_id=insumo.id, precio=precio, vigente_desde=fecha)
+    )
+    db.session.commit()
+    return (
+        jsonify(
+            {
+                "id": insumo.id,
+                "nombre": insumo.nombre,
+                "unidad": insumo.unidad,
+                "unidad_compra": insumo.unidad_compra,
+                "factor_conversion": insumo.factor_conversion,
+                "activa": insumo.activa,
+                "precio": precio,
+                "vigente_desde": fecha.isoformat(),
+            }
+        ),
+        201,
+    )
 
 
 @app.put("/api/insumos/<int:insumo_id>")
@@ -167,17 +293,28 @@ def actualizar_insumo(insumo_id):
     data = request.get_json(silent=True) or {}
     nombre = (data.get("nombre") or "").strip()
     unidad = (data.get("unidad") or "").strip()
-    if not nombre or not unidad:
-        return jsonify({"error": "Nombre y unidad son obligatorios."}), 400
+    unidad_compra = (data.get("unidad_compra") or unidad).strip()
+    factor_conversion = float(data.get("factor_conversion") or 1)
+    if not nombre or not unidad or not unidad_compra or factor_conversion <= 0:
+        return jsonify({"error": "Nombre, unidades y contenido son obligatorios."}), 400
 
     insumo.nombre = nombre
     insumo.unidad = unidad
+    insumo.unidad_compra = unidad_compra
+    insumo.factor_conversion = factor_conversion
+    if "activa" in data:
+        insumo.activa = bool(data.get("activa"))
     db.session.commit()
-    return jsonify({
-        "id": insumo.id,
-        "nombre": insumo.nombre,
-        "unidad": insumo.unidad,
-    })
+    return jsonify(
+        {
+            "id": insumo.id,
+            "nombre": insumo.nombre,
+            "unidad": insumo.unidad,
+            "unidad_compra": insumo.unidad_compra,
+            "factor_conversion": insumo.factor_conversion,
+            "activa": insumo.activa,
+        }
+    )
 
 
 @app.post("/api/precios")
@@ -198,11 +335,13 @@ def actualizar_precios():
 
     recalculados = recalcular_produccion_de_fecha(fecha) if actualizados else []
     db.session.commit()
-    return jsonify({
-        "actualizados": actualizados,
-        "fecha": fecha.isoformat(),
-        "produccion_recalculada": recalculados,
-    })
+    return jsonify(
+        {
+            "actualizados": actualizados,
+            "fecha": fecha.isoformat(),
+            "produccion_recalculada": recalculados,
+        }
+    )
 
 
 # ---------- Recetas ----------
@@ -278,7 +417,7 @@ def desactivar_receta(receta_id):
 # ---------- Produccion ----------
 @app.post("/api/produccion")
 def registrar_produccion():
-    """Recibe {"fecha": "2026-06-04", "items": [{"receta_id": 1, "llenadoras": 100}]}.
+    """Recibe {"fecha": "2026-06-04", "items": [{"receta_id": 1, "aguas": 100}]}.
     Calcula con los precios vigentes de esa fecha y guarda el costo congelado.
     """
     data = request.get_json(silent=True) or {}
@@ -296,34 +435,52 @@ def registrar_produccion():
         receta = db.session.get(Receta, it["receta_id"])
         if not receta:
             continue
-        llenadoras = int(it.get("llenadoras", it.get("botellas", it.get("vasos", 0))))
-        calc = calcular(receta, llenadoras, fecha, modo)
+        aguas = int(it.get("aguas", it.get("vasos", it.get("llenadoras", 0))))
+        calc = calcular(receta, aguas, fecha, modo)
         advertencias.extend(calc.get("advertencias", []))
 
-        prod = Produccion(fecha=fecha, receta_id=receta.id, vasos=llenadoras,
-                          modo_costeo=modo, costo_total=calc["costo_total"],
-                          costo_por_vaso=calc["costo_por_agua"])
+        prod = Produccion(
+            fecha=fecha,
+            receta_id=receta.id,
+            vasos=aguas,
+            modo_costeo=modo,
+            costo_total=calc["costo_total"],
+            costo_por_vaso=calc["costo_por_agua"],
+        )
         db.session.add(prod)
         db.session.flush()
         for d in calc["detalles"]:
-            db.session.add(ProduccionDetalle(
-                produccion_id=prod.id, insumo_id=d["insumo_id"],
-                nombre_insumo=d["nombre_insumo"], cantidad=d["cantidad"],
-                precio_usado=d["precio_usado"], subtotal=d["subtotal"]))
+            db.session.add(
+                ProduccionDetalle(
+                    produccion_id=prod.id,
+                    insumo_id=d["insumo_id"],
+                    nombre_insumo=d["nombre_insumo"],
+                    cantidad=d["cantidad"],
+                    precio_usado=d["precio_usado"],
+                    subtotal=d["subtotal"],
+                )
+            )
 
-        resultados.append({
-            "receta": receta.nombre,
-            "llenadoras": llenadoras,
-            "botellas": llenadoras,
-            "vasos": llenadoras,
-            "aguas": calc["aguas_totales"],
-            **calc,
-        })
+        resultados.append(
+            {
+                "receta": receta.nombre,
+                "llenadoras": round(aguas / (receta.rendimiento_vasos or 160), 2),
+                "botellas": aguas,
+                "vasos": aguas,
+                "aguas": aguas,
+                **calc,
+            }
+        )
 
     db.session.commit()
-    return jsonify({"fecha": fecha.isoformat(), "modo_costeo": modo,
-                    "resultados": resultados,
-                    "advertencias": advertencias})
+    return jsonify(
+        {
+            "fecha": fecha.isoformat(),
+            "modo_costeo": modo,
+            "resultados": resultados,
+            "advertencias": advertencias,
+        }
+    )
 
 
 # ---------- Dashboard ----------
@@ -349,21 +506,29 @@ def dashboard():
                 advertencias.append(
                     f"{p.receta.nombre}: {d.nombre_insumo} no tiene precio vigente mayor a 0."
                 )
-    por_sabor = [{
-        "receta": p.receta.nombre,
-        "llenadoras": p.vasos,
-        "botellas": p.vasos,
-        "vasos": p.vasos,
-        "aguas": p.vasos * (p.receta.rendimiento_vasos or 160),
-        "costo_total": p.costo_total,
-        "costo_por_vaso": p.costo_por_vaso,
-        "costo_por_agua": p.costo_por_vaso,
-        "costo_por_botella": p.costo_por_vaso,
-    } for p in prods]
+    por_sabor = [
+        {
+            "receta": p.receta.nombre,
+            "llenadoras": round(p.vasos / (p.receta.rendimiento_vasos or 160), 2),
+            "botellas": p.vasos,
+            "vasos": p.vasos,
+            "aguas": p.vasos,
+            "costo_total": p.costo_total,
+            "costo_por_vaso": p.costo_por_vaso,
+            "costo_por_agua": p.costo_por_vaso,
+            "costo_por_botella": p.costo_por_vaso,
+        }
+        for p in prods
+    ]
     total = round(sum(p.costo_total for p in prods), 2)
-    return jsonify({"fecha": fecha.isoformat(), "total": total,
-                    "por_sabor": por_sabor,
-                    "advertencias": advertencias})
+    return jsonify(
+        {
+            "fecha": fecha.isoformat(),
+            "total": total,
+            "por_sabor": por_sabor,
+            "advertencias": advertencias,
+        }
+    )
 
 
 @app.get("/api/dashboard/historico")
@@ -380,11 +545,12 @@ def dashboard_historico():
         etiqueta = inicio.strftime("%Y-%m")
         periodo = "mes"
 
-    prods = (Produccion.query
-             .filter(Produccion.fecha >= inicio)
-             .filter(Produccion.fecha <= fin)
-             .order_by(Produccion.fecha, Produccion.id)
-             .all())
+    prods = (
+        Produccion.query.filter(Produccion.fecha >= inicio)
+        .filter(Produccion.fecha <= fin)
+        .order_by(Produccion.fecha, Produccion.id)
+        .all()
+    )
 
     por_dia = {}
     sabores = set()
@@ -392,25 +558,31 @@ def dashboard_historico():
         fecha_key = p.fecha.isoformat()
         receta = p.receta.nombre
         sabores.add(receta)
-        dia = por_dia.setdefault(fecha_key, {
-            "fecha": fecha_key,
-            "total": 0.0,
-            "llenadoras": 0,
-            "aguas": 0,
-            "por_sabor": {},
-        })
-        aguas = p.vasos * (p.receta.rendimiento_vasos or 160)
-        sabor = dia["por_sabor"].setdefault(receta, {
-            "receta": receta,
-            "costo_total": 0.0,
-            "llenadoras": 0,
-            "aguas": 0,
-        })
+        dia = por_dia.setdefault(
+            fecha_key,
+            {
+                "fecha": fecha_key,
+                "total": 0.0,
+                "llenadoras": 0,
+                "aguas": 0,
+                "por_sabor": {},
+            },
+        )
+        aguas = p.vasos
+        sabor = dia["por_sabor"].setdefault(
+            receta,
+            {
+                "receta": receta,
+                "costo_total": 0.0,
+                "llenadoras": 0,
+                "aguas": 0,
+            },
+        )
         dia["total"] += p.costo_total
-        dia["llenadoras"] += p.vasos
+        dia["llenadoras"] += p.vasos / (p.receta.rendimiento_vasos or 160)
         dia["aguas"] += aguas
         sabor["costo_total"] += p.costo_total
-        sabor["llenadoras"] += p.vasos
+        sabor["llenadoras"] += p.vasos / (p.receta.rendimiento_vasos or 160)
         sabor["aguas"] += aguas
 
     dias = []
@@ -426,18 +598,20 @@ def dashboard_historico():
         dias.append(dia)
 
     total_periodo = round(sum(d["total"] for d in dias), 2)
-    return jsonify({
-        "periodo": periodo,
-        "etiqueta": etiqueta,
-        "mes": inicio.strftime("%Y-%m"),
-        "anio": inicio.year,
-        "desde": inicio.isoformat(),
-        "hasta": fin.isoformat(),
-        "sabores": sorted(sabores),
-        "dias": dias,
-        "total_mes": total_periodo,
-        "total_periodo": total_periodo,
-    })
+    return jsonify(
+        {
+            "periodo": periodo,
+            "etiqueta": etiqueta,
+            "mes": inicio.strftime("%Y-%m"),
+            "anio": inicio.year,
+            "desde": inicio.isoformat(),
+            "hasta": fin.isoformat(),
+            "sabores": sorted(sabores),
+            "dias": dias,
+            "total_mes": total_periodo,
+            "total_periodo": total_periodo,
+        }
+    )
 
 
 # ---------- Config ----------

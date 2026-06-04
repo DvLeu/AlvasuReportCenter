@@ -140,6 +140,26 @@ export default function Recetas() {
       .catch(() => setMsg({ tipo: "error", texto: "No se pudo desactivar." }));
   }
 
+  function activar(receta) {
+    const payload = {
+      nombre: receta.nombre,
+      rendimiento_vasos: receta.rendimiento_vasos,
+      volumen_jarra: receta.volumen_jarra ?? 0,
+      activa: true,
+      insumos: receta.insumos.map((ri) => ({
+        insumo_id: ri.insumo_id,
+        cantidad_por_jarra: ri.cantidad_por_jarra,
+      })),
+    };
+    api
+      .actualizarReceta(receta.id, payload)
+      .then(() => {
+        setMsg({ tipo: "ok", texto: `"${receta.nombre}" fue activada.` });
+        cargar();
+      })
+      .catch(() => setMsg({ tipo: "error", texto: "No se pudo activar." }));
+  }
+
   if (cargando) return <p className="muted">Cargando recetas…</p>;
 
   return (
@@ -178,7 +198,9 @@ export default function Recetas() {
                       Desactivar
                     </button>
                   ) : (
-                    <span className="badge warn">inactiva</span>
+                    <button className="btn primary" onClick={() => activar(receta)}>
+                      Activar
+                    </button>
                   )}
                 </div>
               </div>

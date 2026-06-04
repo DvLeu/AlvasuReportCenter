@@ -4,7 +4,6 @@ Ejecutar una sola vez:  python3 seed.py
 """
 from datetime import date
 
-from app import app
 from models import db, Receta, Insumo, RecetaInsumo, PrecioInsumo, Config
 
 # Insumo -> (unidad, precio inicial)
@@ -37,32 +36,70 @@ RECETAS = {
 }
 
 
+SEED_CONFIG_KEY = "seed_catalogo_inicial"
+
+
+def cargar_catalogo_inicial(hoy=None):
+    """Inserta catalogo base. Asume que se llama dentro de app_context."""
+    hoy = hoy or date.today()
+
+    insumo_obj = {}
+    for nombre, (unidad, precio) in INSUMOS.items():
+        ins = Insumo(
+            nombre=nombre,
+            unidad=unidad,
+            unidad_compra=unidad,
+            factor_conversion=1,
+            activa=True,
+        )
+        db.session.add(ins)
+        db.session.flush()
+        db.session.add(PrecioInsumo(insumo_id=ins.id, precio=precio,
+                                    vigente_desde=hoy))
+        insumo_obj[nombre] = ins
+
+    for nombre, (rend, vol, comp) in RECETAS.items():
+        rec = Receta(nombre=nombre, rendimiento_vasos=rend,
+                     volumen_jarra=vol, activa=True)
+        db.session.add(rec)
+        db.session.flush()
+        for ins_nombre, kg in comp.items():
+            db.session.add(RecetaInsumo(
+                receta_id=rec.id, insumo_id=insumo_obj[ins_nombre].id,
+                cantidad_por_jarra=kg))
+
+    if not Config.query.filter_by(clave="modo_costeo").first():
+        db.session.add(Config(clave="modo_costeo", valor="LLENADORAS_COMPLETAS"))
+    if not Config.query.filter_by(clave=SEED_CONFIG_KEY).first():
+        db.session.add(Config(clave=SEED_CONFIG_KEY, valor=hoy.isoformat()))
+
+
+def seed_if_empty():
+    """Carga datos iniciales solo cuando la base esta vacia."""
+    already_seeded = Config.query.filter_by(clave=SEED_CONFIG_KEY).first()
+    has_catalog = Insumo.query.first() or Receta.query.first()
+
+    if already_seeded:
+        return False
+
+    if has_catalog:
+        db.session.add(Config(clave=SEED_CONFIG_KEY, valor="existing_catalog"))
+        db.session.commit()
+        return False
+
+    cargar_catalogo_inicial()
+    db.session.commit()
+    return True
+
+
 def seed():
+    """Reinicia la base completa. Usar solo manualmente."""
+    from app import app
+
     with app.app_context():
         db.drop_all()
         db.create_all()
-        hoy = date.today()
-
-        insumo_obj = {}
-        for nombre, (unidad, precio) in INSUMOS.items():
-            ins = Insumo(nombre=nombre, unidad=unidad)
-            db.session.add(ins)
-            db.session.flush()
-            db.session.add(PrecioInsumo(insumo_id=ins.id, precio=precio,
-                                        vigente_desde=hoy))
-            insumo_obj[nombre] = ins
-
-        for nombre, (rend, vol, comp) in RECETAS.items():
-            rec = Receta(nombre=nombre, rendimiento_vasos=rend,
-                         volumen_jarra=vol, activa=True)
-            db.session.add(rec)
-            db.session.flush()
-            for ins_nombre, kg in comp.items():
-                db.session.add(RecetaInsumo(
-                    receta_id=rec.id, insumo_id=insumo_obj[ins_nombre].id,
-                    cantidad_por_jarra=kg))
-
-        db.session.add(Config(clave="modo_costeo", valor="LLENADORAS_COMPLETAS"))
+        cargar_catalogo_inicial()
         db.session.commit()
         print("Base de datos creada y poblada con datos de ejemplo.")
 

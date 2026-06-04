@@ -6,7 +6,7 @@ const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 export default function Produccion() {
   const [recetas, setRecetas] = useState([]);
-  const [llenadoras, setLlenadoras] = useState({});
+  const [aguas, setAguas] = useState({});
   const [fecha, setFecha] = useState(hoyISO());
   const [resultado, setResultado] = useState(null);
   const [msg, setMsg] = useState(null);
@@ -22,10 +22,10 @@ export default function Produccion() {
 
   function registrar() {
     const items = recetas
-      .map((r) => ({ receta_id: r.id, llenadoras: Number(llenadoras[r.id]) || 0 }))
-      .filter((it) => it.llenadoras > 0);
+      .map((r) => ({ receta_id: r.id, aguas: Number(aguas[r.id]) || 0 }))
+      .filter((it) => it.aguas > 0);
     if (items.length === 0) {
-      setMsg({ tipo: "info", texto: "Captura al menos una cantidad de llenadoras." });
+      setMsg({ tipo: "info", texto: "Captura al menos una cantidad de aguas." });
       return;
     }
     api
@@ -42,7 +42,7 @@ export default function Produccion() {
       <div className="page-head">
         <div>
           <h2>Captura diaria</h2>
-          <p className="muted">Aguas preparadas por sabor. 1 llenadora rinde 160 aguas.</p>
+          <p className="muted">Captura la cantidad de aguas preparadas por sabor.</p>
         </div>
         <label className="date-field">
           Fecha
@@ -59,15 +59,15 @@ export default function Produccion() {
           <thead>
             <tr>
               <th>Sabor</th>
-              <th>Rinde por llenadora</th>
-              <th className="right">Llenadoras</th>
+              <th>Receta base</th>
+              <th className="right">Aguas vendidas</th>
             </tr>
           </thead>
           <tbody>
             {recetas.map((r) => (
               <tr key={r.id}>
                 <td>{r.nombre}</td>
-                <td className="muted">{r.rendimiento_aguas ?? r.rendimiento_vasos} aguas</td>
+                <td className="muted">1 llenadora = {r.rendimiento_aguas ?? r.rendimiento_vasos} aguas</td>
                 <td className="right">
                   <input
                     className="num"
@@ -75,9 +75,9 @@ export default function Produccion() {
                     min="0"
                     step="1"
                     placeholder="0"
-                    value={llenadoras[r.id] ?? ""}
+                    value={aguas[r.id] ?? ""}
                     onChange={(e) =>
-                      setLlenadoras((v) => ({ ...v, [r.id]: e.target.value }))
+                      setAguas((v) => ({ ...v, [r.id]: e.target.value }))
                     }
                   />
                 </td>
@@ -117,14 +117,13 @@ export default function Produccion() {
           <h3>
             Resultado · {resultado.fecha} ·{" "}
             {resultado.modo_costeo === "LLENADORAS_COMPLETAS"
-              ? "llenadoras completas"
+              ? "por cantidad de aguas"
               : "proporcional"}
           </h3>
           <table className="tbl">
             <thead>
               <tr>
                 <th>Sabor</th>
-                <th className="right">Llenadoras</th>
                 <th className="right">Aguas</th>
                 <th className="right">Costo/agua</th>
                 <th className="right">Costo total</th>
@@ -134,8 +133,7 @@ export default function Produccion() {
               {resultado.resultados.map((r, idx) => (
                 <tr key={idx}>
                   <td>{r.receta}</td>
-                  <td className="right">{r.llenadoras ?? r.vasos}</td>
-                  <td className="right">{r.aguas ?? r.llenadoras}</td>
+                  <td className="right">{r.aguas ?? r.vasos}</td>
                   <td className="right">{money(r.costo_por_agua ?? r.costo_por_vaso)}</td>
                   <td className="right">{money(r.costo_total)}</td>
                 </tr>

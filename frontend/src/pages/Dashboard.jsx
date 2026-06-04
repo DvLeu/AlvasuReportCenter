@@ -68,10 +68,6 @@ export default function Dashboard() {
       );
   }, [periodo, mes, anio]);
 
-  const llenadorasTotales = data
-    ? data.por_sabor.reduce((a, s) => a + (s.llenadoras ?? s.vasos), 0)
-    : 0;
-
   const aguasTotales = data
     ? data.por_sabor.reduce((a, s) => a + (s.aguas ?? 0), 0)
     : 0;
@@ -164,14 +160,14 @@ export default function Dashboard() {
               <span className="metric-note">recetas activas capturadas</span>
             </div>
             <div className="metric">
-              <span className="metric-label">Llenadoras totales</span>
-              <span className="metric-value">{number(llenadorasTotales)}</span>
-              <span className="metric-note">producción registrada</span>
-            </div>
-            <div className="metric">
               <span className="metric-label">Aguas totales</span>
               <span className="metric-value">{number(aguasTotales)}</span>
-              <span className="metric-note">rendimiento estimado</span>
+              <span className="metric-note">cantidad capturada</span>
+            </div>
+            <div className="metric">
+              <span className="metric-label">Costo promedio</span>
+              <span className="metric-value">{money(costoPromedioAgua)}</span>
+              <span className="metric-note">por agua preparada</span>
             </div>
           </div>
 
@@ -189,7 +185,6 @@ export default function Dashboard() {
                 <thead>
                   <tr>
                     <th>Sabor</th>
-                    <th className="right">Llenadoras</th>
                     <th className="right">Aguas</th>
                     <th className="right">Costo/agua</th>
                     <th className="right">Costo total</th>
@@ -207,7 +202,6 @@ export default function Dashboard() {
                           {s.receta}
                         </span>
                       </td>
-                      <td className="right">{number(s.llenadoras ?? s.vasos)}</td>
                       <td className="right">{number(s.aguas ?? 0)}</td>
                       <td className="right">{money(s.costo_por_agua ?? s.costo_por_vaso)}</td>
                       <td className="right">{money(s.costo_total)}</td>

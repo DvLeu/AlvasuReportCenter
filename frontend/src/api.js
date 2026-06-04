@@ -10,7 +10,15 @@ async function req(path, opts = {}) {
 }
 
 export const api = {
-  insumos: (fecha) => req("/insumos" + (fecha ? "?fecha=" + fecha : "")),
+  insumos: (fecha, todas = false) => {
+    const params = new URLSearchParams();
+    if (fecha) params.set("fecha", fecha);
+    if (todas) params.set("todas", "1");
+    const query = params.toString();
+    return req("/insumos" + (query ? "?" + query : ""));
+  },
+  crearInsumo: (payload) =>
+    req("/insumos", { method: "POST", body: JSON.stringify(payload) }),
   actualizarInsumo: (id, payload) =>
     req(`/insumos/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   guardarPrecios: (cambios, fecha) =>
