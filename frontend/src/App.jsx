@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Recetas from "./pages/Recetas.jsx";
 
 const TABS = [
-  { id: "precios", label: "Precios", comp: Precios },
+  { id: "precios", label: "Insumos", comp: Precios },
   { id: "recetas", label: "Recetas", comp: Recetas },
   { id: "produccion", label: "Producción", comp: Produccion },
   { id: "dashboard", label: "Dashboard", comp: Dashboard },
