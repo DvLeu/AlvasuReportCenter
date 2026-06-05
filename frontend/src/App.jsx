@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Precios from "./pages/Precios.jsx";
 import Produccion from "./pages/Produccion.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -98,7 +98,17 @@ function AlvasuLogo() {
 
 export default function App() {
   const [tab, setTab] = useState("precios");
+  const [theme, setTheme] = useState(() => localStorage.getItem("theme") || "light");
   const Active = TABS.find((t) => t.id === tab).comp;
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  }
 
   return (
     <div className="app">
@@ -110,20 +120,33 @@ export default function App() {
             <p>Calculadora de costos</p>
           </div>
         </div>
-        <nav className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              className={"tab" + (tab === t.id ? " active" : "")}
-              onClick={() => setTab(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
+        <div className="topbar-actions">
+          <nav className="tabs">
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                className={"tab" + (tab === t.id ? " active" : "")}
+                onClick={() => setTab(t.id)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
+          <button
+            className="theme-toggle"
+            type="button"
+            onClick={toggleTheme}
+            aria-pressed={theme === "dark"}
+            aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
+          >
+            <span className="theme-toggle-icon" aria-hidden="true" />
+            <span>{theme === "dark" ? "Claro" : "Oscuro"}</span>
+          </button>
+        </div>
       </header>
       <main>
-        <Active />
+        <Active theme={theme} />
       </main>
     </div>
   );

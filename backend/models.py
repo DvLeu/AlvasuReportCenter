@@ -98,6 +98,15 @@ class ProduccionDetalle(db.Model):
     subtotal = db.Column(db.Float, nullable=False)
 
 
+class VentaDiaria(db.Model):
+    """Ingreso/venta capturada por dia para calcular ganancia neta."""
+
+    __tablename__ = "ventas_diarias"
+    id = db.Column(db.Integer, primary_key=True)
+    fecha = db.Column(db.Date, nullable=False, unique=True)
+    venta_total = db.Column(db.Float, nullable=False, default=0.0)
+
+
 class Config(db.Model):
     """Ajustes globales, p. ej. modo_costeo = LLENADORAS_COMPLETAS | PROPORCIONAL."""
 

@@ -51,6 +51,12 @@ export default function Recetas() {
 
   useEffect(cargar, []);
 
+  useEffect(() => {
+    if (!msg) return undefined;
+    const timer = setTimeout(() => setMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [msg]);
+
   const insumoLookup = useMemo(
     () => new Map(insumos.map((i) => [String(i.id), i])),
     [insumos]

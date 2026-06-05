@@ -27,6 +27,7 @@ from models import (
     PrecioInsumo,
     Produccion,
     ProduccionDetalle,
+    VentaDiaria,
     Config,
 )
 from calc import calcular
@@ -104,6 +105,12 @@ def parse_fecha(valor):
     return date.today()
 
 
+def validar_fecha_no_futura(fecha):
+    if fecha > date.today():
+        return jsonify({"error": "No se permiten fechas futuras."}), 400
+    return None
+
+
 def parse_mes(valor):
     if valor:
         return datetime.strptime(valor, "%Y-%m").date().replace(day=1)
@@ -179,6 +186,11 @@ def recalcular_produccion_de_fecha(fecha):
     return recalculados
 
 
+def venta_de_fecha(fecha):
+    venta = VentaDiaria.query.filter_by(fecha=fecha).first()
+    return venta.venta_total if venta else 0.0
+
+
 def receta_json(receta):
     return {
         "id": receta.id,
@@ -251,6 +263,9 @@ def crear_insumo():
     factor_conversion = float(data.get("factor_conversion") or 1)
     precio = float(data.get("precio") or 0)
     fecha = parse_fecha(data.get("fecha"))
+    fecha_error = validar_fecha_no_futura(fecha)
+    if fecha_error:
+        return fecha_error
     if not nombre or not unidad or not unidad_compra or factor_conversion <= 0:
         return jsonify({"error": "Nombre, unidades y contenido son obligatorios."}), 400
 
@@ -325,6 +340,9 @@ def actualizar_precios():
     data = request.get_json(silent=True) or {}
     cambios = data.get("cambios", [])
     fecha = parse_fecha(data.get("fecha"))
+    fecha_error = validar_fecha_no_futura(fecha)
+    if fecha_error:
+        return fecha_error
     actualizados = []
 
     for c in cambios:
@@ -422,6 +440,9 @@ def registrar_produccion():
     """
     data = request.get_json(silent=True) or {}
     fecha = parse_fecha(data.get("fecha"))
+    fecha_error = validar_fecha_no_futura(fecha)
+    if fecha_error:
+        return fecha_error
     modo = get_config("modo_costeo", "LLENADORAS_COMPLETAS")
     items = data.get("items", [])
 
@@ -483,6 +504,40 @@ def registrar_produccion():
     )
 
 
+@app.post("/api/ventas-diarias")
+def guardar_venta_diaria():
+    data = request.get_json(silent=True) or {}
+    fecha = parse_fecha(data.get("fecha"))
+    fecha_error = validar_fecha_no_futura(fecha)
+    if fecha_error:
+        return fecha_error
+
+    venta_total = float(data.get("venta_total") or 0)
+    if venta_total < 0:
+        return jsonify({"error": "La venta del día no puede ser negativa."}), 400
+
+    venta = VentaDiaria.query.filter_by(fecha=fecha).first()
+    if not venta:
+        venta = VentaDiaria(fecha=fecha, venta_total=venta_total)
+        db.session.add(venta)
+    else:
+        venta.venta_total = venta_total
+    db.session.commit()
+
+    inversion_total = round(
+        sum(p.costo_total for p in Produccion.query.filter_by(fecha=fecha).all()), 2
+    )
+    ganancia_neta = round(venta_total - inversion_total, 2)
+    return jsonify(
+        {
+            "fecha": fecha.isoformat(),
+            "venta_total": round(venta_total, 2),
+            "inversion_total": inversion_total,
+            "ganancia_neta": ganancia_neta,
+        }
+    )
+
+
 # ---------- Dashboard ----------
 @app.get("/api/dashboard")
 def dashboard():
@@ -521,10 +576,15 @@ def dashboard():
         for p in prods
     ]
     total = round(sum(p.costo_total for p in prods), 2)
+    venta_total = round(venta_de_fecha(fecha), 2)
+    ganancia_neta = round(venta_total - total, 2)
     return jsonify(
         {
             "fecha": fecha.isoformat(),
             "total": total,
+            "inversion_total": total,
+            "venta_total": venta_total,
+            "ganancia_neta": ganancia_neta,
             "por_sabor": por_sabor,
             "advertencias": advertencias,
         }
@@ -549,6 +609,11 @@ def dashboard_historico():
         Produccion.query.filter(Produccion.fecha >= inicio)
         .filter(Produccion.fecha <= fin)
         .order_by(Produccion.fecha, Produccion.id)
+        .all()
+    )
+    ventas = (
+        VentaDiaria.query.filter(VentaDiaria.fecha >= inicio)
+        .filter(VentaDiaria.fecha <= fin)
         .all()
     )
 
@@ -585,9 +650,25 @@ def dashboard_historico():
         sabor["llenadoras"] += p.vasos / (p.receta.rendimiento_vasos or 160)
         sabor["aguas"] += aguas
 
+    for venta in ventas:
+        fecha_key = venta.fecha.isoformat()
+        dia = por_dia.setdefault(
+            fecha_key,
+            {
+                "fecha": fecha_key,
+                "total": 0.0,
+                "llenadoras": 0,
+                "aguas": 0,
+                "por_sabor": {},
+            },
+        )
+        dia["venta_total"] = venta.venta_total
+
     dias = []
     for dia in por_dia.values():
         dia["total"] = round(dia["total"], 2)
+        dia["venta_total"] = round(dia.get("venta_total", 0.0), 2)
+        dia["ganancia_neta"] = round(dia["venta_total"] - dia["total"], 2)
         dia["por_sabor"] = [
             {
                 **sabor,
@@ -597,7 +678,10 @@ def dashboard_historico():
         ]
         dias.append(dia)
 
+    dias.sort(key=lambda d: d["fecha"])
     total_periodo = round(sum(d["total"] for d in dias), 2)
+    venta_periodo = round(sum(d["venta_total"] for d in dias), 2)
+    ganancia_periodo = round(venta_periodo - total_periodo, 2)
     return jsonify(
         {
             "periodo": periodo,
@@ -610,6 +694,8 @@ def dashboard_historico():
             "dias": dias,
             "total_mes": total_periodo,
             "total_periodo": total_periodo,
+            "venta_periodo": venta_periodo,
+            "ganancia_periodo": ganancia_periodo,
         }
     )
 

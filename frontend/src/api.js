@@ -31,6 +31,11 @@ export const api = {
   desactivarReceta: (id) => req(`/recetas/${id}`, { method: "DELETE" }),
   registrarProduccion: (fecha, items) =>
     req("/produccion", { method: "POST", body: JSON.stringify({ fecha, items }) }),
+  guardarVentaDia: (fecha, venta_total) =>
+    req("/ventas-diarias", {
+      method: "POST",
+      body: JSON.stringify({ fecha, venta_total }),
+    }),
   dashboard: (fecha) => req("/dashboard" + (fecha ? "?fecha=" + fecha : "")),
   dashboardHistorico: ({ periodo = "mes", mes, anio } = {}) => {
     const params = new URLSearchParams({ periodo });

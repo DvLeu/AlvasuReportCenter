@@ -6,32 +6,45 @@ from datetime import date
 
 from models import db, Receta, Insumo, RecetaInsumo, PrecioInsumo, Config
 
-# Insumo -> (unidad, precio inicial)
+# Insumo -> (unidad_receta, unidad_compra, contenido_compra, precio_compra)
 INSUMOS = {
-    "Jarabe": ("l", 0),
-    "Leche Clavel": ("l", 0),
-    "Agua": ("l", 0),
-    "Vainilla": ("l", 0),
-    "Botella": ("pza", 0),
-    "Jamaica": ("kg", 0),
-    "Azúcar": ("kg", 0),
-    "Pulpa": ("kg", 0),
-    "Limón": ("kg", 0),
+    "Jarabe Horchata": ("l", "garrafa", 5, 420),
+    "Leche Clavel": ("l", "l", 1, 58),
+    "Agua": ("l", "garrafón", 20, 35),
+    "Concentrado de Vainilla": ("l", "botella", 1, 95),
+    "Botella": ("pza", "caja", 100, 240),
+    "Jamaica": ("kg", "kg", 1, 160),
+    "Azúcar": ("kg", "costal", 50, 950),
+    "Pulpa de Maracuya": ("kg", "cubeta", 5, 520),
+    "Limón": ("kg", "kg", 1, 38),
 }
 
 # Receta -> (rendimiento_aguas_por_llenadora, volumen_llenadora_litros, {insumo: cantidad_por_llenadora})
 RECETAS = {
     "Horchata": (160, 80.0, {
-        "Jarabe": 0.0, "Leche Clavel": 0.0, "Agua": 0.0, "Vainilla": 0.0, "Botella": 0.0,
+        "Jarabe Horchata": 4.0,
+        "Leche Clavel": 3.0,
+        "Agua": 72.0,
+        "Concentrado de Vainilla": 0.25,
+        "Botella": 160.0,
     }),
     "Jamaica": (160, 80.0, {
-        "Jamaica": 0.0, "Agua": 0.0, "Azúcar": 0.0, "Botella": 0.0,
+        "Jamaica": 1.6,
+        "Agua": 80.0,
+        "Azúcar": 8.0,
+        "Botella": 160.0,
     }),
     "Maracuya": (160, 80.0, {
-        "Pulpa": 0.0, "Agua": 0.0, "Azúcar": 0.0, "Botella": 0.0,
+        "Pulpa de Maracuya": 8.0,
+        "Agua": 80.0,
+        "Azúcar": 6.0,
+        "Botella": 160.0,
     }),
     "Limón": (160, 80.0, {
-        "Limón": 0.0, "Agua": 0.0, "Azúcar": 0.0, "Botella": 0.0,
+        "Limón": 6.0,
+        "Agua": 80.0,
+        "Azúcar": 7.0,
+        "Botella": 160.0,
     }),
 }
 
@@ -44,12 +57,12 @@ def cargar_catalogo_inicial(hoy=None):
     hoy = hoy or date.today()
 
     insumo_obj = {}
-    for nombre, (unidad, precio) in INSUMOS.items():
+    for nombre, (unidad, unidad_compra, factor_conversion, precio) in INSUMOS.items():
         ins = Insumo(
             nombre=nombre,
             unidad=unidad,
-            unidad_compra=unidad,
-            factor_conversion=1,
+            unidad_compra=unidad_compra,
+            factor_conversion=factor_conversion,
             activa=True,
         )
         db.session.add(ins)

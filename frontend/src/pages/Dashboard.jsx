@@ -38,21 +38,32 @@ function colorForFlavor(name, idx = 0) {
   return flavorColors[normalizeFlavorName(name)] || fallbackChartColors[idx % fallbackChartColors.length];
 }
 
-export default function Dashboard() {
+export default function Dashboard({ theme = "light" }) {
+  const darkMode = theme === "dark";
+  const hoy = hoyISO();
+  const mesActual = mesISO(hoy);
+  const anioActual = anioISO(hoy);
   const [fecha, setFecha] = useState(hoyISO());
   const [periodo, setPeriodo] = useState("mes");
   const [mes, setMes] = useState(mesISO(hoyISO()));
   const [anio, setAnio] = useState(anioISO(hoyISO()));
   const [data, setData] = useState(null);
   const [historico, setHistorico] = useState(null);
+  const [ventaDia, setVentaDia] = useState("");
+  const [guardandoVenta, setGuardandoVenta] = useState(false);
   const [msg, setMsg] = useState(null);
   const [historicoMsg, setHistoricoMsg] = useState(null);
+  const [ventaMsg, setVentaMsg] = useState(null);
 
   useEffect(() => {
     setMsg(null);
     api
       .dashboard(fecha)
-      .then(setData)
+      .then((d) => {
+        setData(d);
+        setVentaDia(d.venta_total || "");
+        setVentaMsg(null);
+      })
       .catch(() =>
         setMsg({ tipo: "error", texto: "No se pudo cargar el dashboard." })
       );
@@ -68,14 +79,36 @@ export default function Dashboard() {
       );
   }, [periodo, mes, anio]);
 
+  useEffect(() => {
+    if (!msg) return undefined;
+    const timer = setTimeout(() => setMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [msg]);
+
+  useEffect(() => {
+    if (!ventaMsg) return undefined;
+    const timer = setTimeout(() => setVentaMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [ventaMsg]);
+
+  useEffect(() => {
+    if (!historicoMsg) return undefined;
+    const timer = setTimeout(() => setHistoricoMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [historicoMsg]);
+
   const aguasTotales = data
     ? data.por_sabor.reduce((a, s) => a + (s.aguas ?? 0), 0)
     : 0;
   const costoPromedioAgua = aguasTotales > 0 ? data.total / aguasTotales : 0;
+  const ventaTotal = data?.venta_total ?? 0;
+  const gananciaNeta = data?.ganancia_neta ?? 0;
 
   const diasHistorico = historico?.dias ?? [];
   const fechasHistorico = diasHistorico.map((d) => d.fecha);
   const totalHistorico = historico?.total_periodo ?? historico?.total_mes ?? 0;
+  const ventaHistorico = historico?.venta_periodo ?? 0;
+  const gananciaHistorico = historico?.ganancia_periodo ?? 0;
   const promedioDiario = diasHistorico.length > 0 ? totalHistorico / diasHistorico.length : 0;
   const diaMayor = diasHistorico.reduce(
     (max, dia) => (dia.total > (max?.total ?? -Infinity) ? dia : max),
@@ -112,6 +145,103 @@ export default function Dashboard() {
         })),
       ]
     : [];
+  const tracesGanancia = historico
+    ? [
+        {
+          type: "scatter",
+          mode: "lines+markers",
+          name: "Inversión",
+          x: fechasHistorico,
+          y: diasHistorico.map((dia) => dia.total),
+          line: { color: "#0f8ec7", width: 3, shape: "spline", smoothing: 0.45 },
+          marker: { color: "#0f8ec7", size: periodo === "anio" ? 4 : 7 },
+          hovertemplate: "Inversión<br>%{x}<br>%{y:$,.2f}<extra></extra>",
+        },
+        {
+          type: "scatter",
+          mode: "lines+markers",
+          name: "Ganancia neta",
+          x: fechasHistorico,
+          y: diasHistorico.map((dia) => dia.ganancia_neta),
+          line: { color: "#2e9d4d", width: 3, shape: "spline", smoothing: 0.45 },
+          marker: { color: "#2e9d4d", size: periodo === "anio" ? 4 : 7 },
+          hovertemplate: "Ganancia neta<br>%{x}<br>%{y:$,.2f}<extra></extra>",
+        },
+      ]
+    : [];
+
+  function guardarVentaDia() {
+    if (fecha > hoy) {
+      setVentaMsg({ tipo: "error", texto: "No se puede guardar una venta en fecha futura." });
+      return;
+    }
+    const venta = Number(ventaDia) || 0;
+    if (venta < 0) {
+      setVentaMsg({ tipo: "error", texto: "La venta del día no puede ser negativa." });
+      return;
+    }
+    setGuardandoVenta(true);
+    api
+      .guardarVentaDia(fecha, venta)
+      .then((res) => {
+        setData((prev) => ({ ...prev, ...res, total: res.inversion_total }));
+        setVentaDia(res.venta_total || "");
+        setVentaMsg({ tipo: "ok", texto: "Venta del día guardada." });
+        return api.dashboardHistorico({ periodo, mes, anio });
+      })
+      .then(setHistorico)
+      .catch(() => setVentaMsg({ tipo: "error", texto: "No se pudo guardar la venta." }))
+      .finally(() => setGuardandoVenta(false));
+  }
+
+  function renderPeriodControls() {
+    return (
+      <div className="chart-controls">
+        <div className="segmented-control" aria-label="Periodo histórico">
+          <button
+            type="button"
+            className={periodo === "mes" ? "active" : ""}
+            onClick={() => setPeriodo("mes")}
+          >
+            Mes
+          </button>
+          <button
+            type="button"
+            className={periodo === "anio" ? "active" : ""}
+            onClick={() => setPeriodo("anio")}
+          >
+            Año
+          </button>
+        </div>
+        {periodo === "anio" ? (
+          <label className="date-field">
+            Año
+            <input
+              type="number"
+              min="2000"
+              max={anioActual}
+              step="1"
+              value={anio}
+              onChange={(e) => {
+                const value = e.target.value;
+                setAnio(value && Number(value) > Number(anioActual) ? anioActual : value);
+              }}
+            />
+          </label>
+        ) : (
+          <label className="date-field">
+            Mes
+            <input
+              type="month"
+              value={mes}
+              max={mesActual}
+              onChange={(e) => setMes(e.target.value > mesActual ? mesActual : e.target.value)}
+            />
+          </label>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section>
@@ -125,7 +255,8 @@ export default function Dashboard() {
           <input
             type="date"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
+            max={hoy}
+            onChange={(e) => setFecha(e.target.value > hoy ? hoy : e.target.value)}
           />
         </label>
       </div>
@@ -169,6 +300,42 @@ export default function Dashboard() {
               <span className="metric-value">{money(costoPromedioAgua)}</span>
               <span className="metric-note">por agua preparada</span>
             </div>
+            <div className="metric metric-profit">
+              <span className="metric-label">Ganancia neta</span>
+              <span className="metric-value">{money(gananciaNeta)}</span>
+              <span className="metric-note">{money(ventaTotal)} venta - {money(data.total)} inversión</span>
+            </div>
+          </div>
+
+          <div className="card profit-card">
+            <div>
+              <h3>Ganancia del día</h3>
+              <p className="muted">Captura la venta total del día para restar la inversión calculada.</p>
+            </div>
+            <div className="profit-form">
+              <label>
+                Venta del día
+                <span>
+                  <strong>$</strong>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={ventaDia}
+                    onChange={(e) => setVentaDia(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </span>
+              </label>
+              <div className="profit-result">
+                <span>Ganancia neta</span>
+                <strong>{money((Number(ventaDia) || 0) - (data.total || 0))}</strong>
+              </div>
+              <button className="btn primary" onClick={guardarVentaDia} disabled={guardandoVenta}>
+                {guardandoVenta ? "Guardando..." : "Guardar venta"}
+              </button>
+            </div>
+            {ventaMsg && <div className={"msg " + ventaMsg.tipo}>{ventaMsg.texto}</div>}
           </div>
 
           <div className="card table-card">
@@ -215,49 +382,86 @@ export default function Dashboard() {
           <div className="card chart-card">
             <div className="card-title-row">
               <div>
+                <h3>Inversión vs ganancia</h3>
+                <p className="muted">Comparativo diario entre costo invertido y ganancia neta.</p>
+              </div>
+              {renderPeriodControls()}
+            </div>
+
+            {!historico ? (
+              <p className="muted chart-empty">Cargando histórico...</p>
+            ) : diasHistorico.length === 0 ? (
+              <p className="muted chart-empty">No hay datos para comparar en este periodo.</p>
+            ) : (
+              <Plot
+                data={tracesGanancia}
+                layout={{
+                  autosize: true,
+                  height: 360,
+                  margin: { l: 78, r: 26, t: 42, b: 70 },
+                  title: {
+                    text: `Inversión vs ganancia · ${periodo === "anio" ? anio : mes}`,
+                    x: 0.5,
+                    xanchor: "center",
+                    font: { size: 20, color: darkMode ? "#e8f4f7" : "#211e18" },
+                  },
+                  plot_bgcolor: darkMode ? "#0f2735" : "#ffffff",
+                  paper_bgcolor: darkMode ? "#0f2735" : "#ffffff",
+                  font: {
+                    family: "DM Sans, system-ui, sans-serif",
+                    color: darkMode ? "#e8f4f7" : "#211e18",
+                  },
+                  xaxis: {
+                    title: { text: "Fecha", font: { size: 16, color: darkMode ? "#e8f4f7" : "#211e18" } },
+                    type: "category",
+                    tickangle: -35,
+                    nticks: periodo === "anio" ? 14 : 12,
+                    showgrid: true,
+                    gridcolor: darkMode ? "rgba(197, 231, 240, 0.12)" : "rgba(7, 50, 74, 0.1)",
+                    zeroline: false,
+                    linecolor: darkMode ? "rgba(197, 231, 240, 0.24)" : "rgba(33, 30, 24, 0.18)",
+                  },
+                  yaxis: {
+                    title: { text: "Monto", font: { size: 16, color: darkMode ? "#e8f4f7" : "#211e18" } },
+                    tickprefix: "$",
+                    separatethousands: true,
+                    showgrid: true,
+                    gridcolor: darkMode ? "rgba(197, 231, 240, 0.12)" : "rgba(7, 50, 74, 0.1)",
+                    zeroline: true,
+                    zerolinecolor: darkMode ? "rgba(197, 231, 240, 0.34)" : "rgba(33, 30, 24, 0.26)",
+                    linecolor: darkMode ? "rgba(197, 231, 240, 0.24)" : "rgba(33, 30, 24, 0.18)",
+                  },
+                  legend: { orientation: "h", y: -0.32, x: 0 },
+                  hovermode: "x unified",
+                }}
+                config={{ displayModeBar: false, responsive: true }}
+                useResizeHandler
+                className="history-chart profit-chart"
+              />
+            )}
+
+            {historico && diasHistorico.length > 0 && (
+              <div className="chart-summary metric-strip">
+                <span className="summary-pill">
+                  Inversión <strong>{money(totalHistorico)}</strong>
+                </span>
+                <span className="summary-pill">
+                  Venta <strong>{money(ventaHistorico)}</strong>
+                </span>
+                <span className="summary-pill">
+                  Ganancia <strong>{money(gananciaHistorico)}</strong>
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className="card chart-card">
+            <div className="card-title-row">
+              <div>
                 <h3>Histórico {periodo === "anio" ? "anual" : "mensual"}</h3>
                 <p className="muted">Tendencia diaria de inversión total. Activa sabores desde la leyenda.</p>
               </div>
-              <div className="chart-controls">
-                <div className="segmented-control" aria-label="Periodo histórico">
-                  <button
-                    type="button"
-                    className={periodo === "mes" ? "active" : ""}
-                    onClick={() => setPeriodo("mes")}
-                  >
-                    Mes
-                  </button>
-                  <button
-                    type="button"
-                    className={periodo === "anio" ? "active" : ""}
-                    onClick={() => setPeriodo("anio")}
-                  >
-                    Año
-                  </button>
-                </div>
-                {periodo === "anio" ? (
-                  <label className="date-field">
-                    Año
-                    <input
-                      type="number"
-                      min="2000"
-                      max="2100"
-                      step="1"
-                      value={anio}
-                      onChange={(e) => setAnio(e.target.value)}
-                    />
-                  </label>
-                ) : (
-                  <label className="date-field">
-                    Mes
-                    <input
-                      type="month"
-                      value={mes}
-                      onChange={(e) => setMes(e.target.value)}
-                    />
-                  </label>
-                )}
-              </div>
+              {renderPeriodControls()}
             </div>
 
             {historicoMsg && (
@@ -281,32 +485,32 @@ export default function Dashboard() {
                     text: `Historial de inversión diaria · ${periodo === "anio" ? anio : mes}`,
                     x: 0.5,
                     xanchor: "center",
-                    font: { size: 22, color: "#211e18" },
+                    font: { size: 22, color: darkMode ? "#e8f4f7" : "#211e18" },
                   },
-                  paper_bgcolor: "#ffffff",
-                  plot_bgcolor: "#ffffff",
+                  plot_bgcolor: darkMode ? "#0f2735" : "#ffffff",
+                  paper_bgcolor: darkMode ? "#0f2735" : "#ffffff",
                   font: {
                     family: "DM Sans, system-ui, sans-serif",
-                    color: "#211e18",
+                    color: darkMode ? "#e8f4f7" : "#211e18",
                   },
                   xaxis: {
-                    title: { text: "Fecha", font: { size: 18 } },
+                    title: { text: "Fecha", font: { size: 18, color: darkMode ? "#e8f4f7" : "#211e18" } },
                     type: "category",
                     tickangle: -35,
                     nticks: periodo === "anio" ? 14 : 12,
                     showgrid: true,
-                    gridcolor: "rgba(7, 50, 74, 0.1)",
+                    gridcolor: darkMode ? "rgba(197, 231, 240, 0.12)" : "rgba(7, 50, 74, 0.1)",
                     zeroline: false,
-                    linecolor: "rgba(33, 30, 24, 0.18)",
+                    linecolor: darkMode ? "rgba(197, 231, 240, 0.24)" : "rgba(33, 30, 24, 0.18)",
                   },
                   yaxis: {
-                    title: { text: "Inversión", font: { size: 18 } },
+                    title: { text: "Inversión", font: { size: 18, color: darkMode ? "#e8f4f7" : "#211e18" } },
                     tickprefix: "$",
                     separatethousands: true,
                     showgrid: true,
-                    gridcolor: "rgba(7, 50, 74, 0.1)",
+                    gridcolor: darkMode ? "rgba(197, 231, 240, 0.12)" : "rgba(7, 50, 74, 0.1)",
                     zeroline: false,
-                    linecolor: "rgba(33, 30, 24, 0.18)",
+                    linecolor: darkMode ? "rgba(197, 231, 240, 0.24)" : "rgba(33, 30, 24, 0.18)",
                   },
                   legend: {
                     orientation: "h",

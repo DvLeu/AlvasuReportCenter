@@ -98,6 +98,12 @@ export default function Precios() {
 
   useEffect(cargar, [fecha]);
 
+  useEffect(() => {
+    if (!msg) return undefined;
+    const timer = setTimeout(() => setMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [msg]);
+
   const cambiosPrecio = insumos
     .filter(
       (i) =>
@@ -166,6 +172,10 @@ export default function Precios() {
   }
 
   function guardar() {
+    if (fecha > hoyISO()) {
+      setMsg({ tipo: "error", texto: "No se pueden guardar precios con fecha futura." });
+      return;
+    }
     if (cambiosPrecio.length === 0 && cambiosInsumo.length === 0) {
       setMsg({ tipo: "info", texto: "No hay cambios por guardar." });
       return;
@@ -199,6 +209,10 @@ export default function Precios() {
   }
 
   function guardarNuevoInsumo() {
+    if (fecha > hoyISO()) {
+      setMsg({ tipo: "error", texto: "No se pueden agregar insumos con fecha futura." });
+      return;
+    }
     const payload = {
       nombre: (nuevoInsumo?.nombre || "").trim(),
       unidad: (nuevoInsumo?.unidad || "").trim(),
@@ -247,7 +261,8 @@ export default function Precios() {
             <input
               type="date"
               value={fecha}
-              onChange={(e) => setFecha(e.target.value)}
+              max={hoyISO()}
+              onChange={(e) => setFecha(e.target.value > hoyISO() ? hoyISO() : e.target.value)}
             />
           </label>
           <button

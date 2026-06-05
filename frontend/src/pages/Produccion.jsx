@@ -20,7 +20,17 @@ export default function Produccion() {
       );
   }, []);
 
+  useEffect(() => {
+    if (!msg) return undefined;
+    const timer = setTimeout(() => setMsg(null), 3500);
+    return () => clearTimeout(timer);
+  }, [msg]);
+
   function registrar() {
+    if (fecha > hoyISO()) {
+      setMsg({ tipo: "error", texto: "No se puede registrar producción en fechas futuras." });
+      return;
+    }
     const items = recetas
       .map((r) => ({ receta_id: r.id, aguas: Number(aguas[r.id]) || 0 }))
       .filter((it) => it.aguas > 0);
@@ -49,7 +59,8 @@ export default function Produccion() {
           <input
             type="date"
             value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
+            max={hoyISO()}
+            onChange={(e) => setFecha(e.target.value > hoyISO() ? hoyISO() : e.target.value)}
           />
         </label>
       </div>
