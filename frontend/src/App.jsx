@@ -14,83 +14,35 @@ const TABS = [
 function AlvasuLogo() {
   return (
     <svg
-      className="brand-logo"
-      viewBox="0 0 760 250"
+      className="brand-mark"
+      viewBox="0 0 64 64"
       role="img"
       aria-labelledby="alvasu-logo-title"
     >
-      <title id="alvasu-logo-title">Alvasu más natural imposible</title>
+      <title id="alvasu-logo-title">Alvasu</title>
       <defs>
-        <linearGradient id="logoBg" x1="0" y1="0" x2="0" y2="250" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#27a9df" />
-          <stop offset="0.5" stopColor="#cfe8f7" />
-          <stop offset="0.78" stopColor="#ffffff" />
-          <stop offset="1" stopColor="#fff7ba" />
+        <linearGradient id="markBg" x1="10" y1="6" x2="54" y2="58" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stopColor="#32b5e8" />
+          <stop offset="1" stopColor="#0d6f9f" />
         </linearGradient>
-        <linearGradient id="letterFill" x1="120" y1="44" x2="650" y2="162" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#109bd5" />
-          <stop offset="0.55" stopColor="#087fbd" />
-          <stop offset="1" stopColor="#006aa6" />
-        </linearGradient>
-        <linearGradient id="letterWave" x1="110" y1="114" x2="650" y2="154" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#00689f" />
-          <stop offset="1" stopColor="#004f83" />
-        </linearGradient>
-        <filter id="wordShadow" x="-4%" y="-12%" width="108%" height="130%">
-          <feDropShadow dx="0" dy="3" stdDeviation="2.4" floodColor="#075d91" floodOpacity="0.26" />
+        <filter id="markShadow" x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#0f2530" floodOpacity="0.18" />
         </filter>
       </defs>
-
-      <rect x="0" y="0" width="760" height="250" rx="26" fill="url(#logoBg)" />
-
-      <g filter="url(#wordShadow)">
-        <text
-          x="380"
-          y="148"
-          textAnchor="middle"
-          fill="url(#letterFill)"
-          stroke="#ffffff"
-          strokeWidth="12"
-          paintOrder="stroke"
-          fontFamily="Arial Black, Montserrat, system-ui, sans-serif"
-          fontSize="122"
-          fontWeight="900"
-          letterSpacing="2"
-        >
-          Alvasu
-        </text>
-        <text
-          x="380"
-          y="148"
-          textAnchor="middle"
-          fill="url(#letterFill)"
-          stroke="#ffffff"
-          strokeWidth="12"
-          paintOrder="stroke"
-          fontFamily="Arial Black, Montserrat, system-ui, sans-serif"
-          fontSize="122"
-          fontWeight="900"
-          letterSpacing="2"
-        >
-          Alvasu
-        </text>
-      </g>
-
+      <rect x="7" y="7" width="50" height="50" rx="14" fill="url(#markBg)" filter="url(#markShadow)" />
+      <path d="M20 44 31.8 16 44 44" fill="none" stroke="#ffffff" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24.5 35.5h15" fill="none" stroke="#ffffff" strokeWidth="5.5" strokeLinecap="round" />
       <text
-        x="385"
-        y="205"
+        x="32"
+        y="51"
         textAnchor="middle"
-        fill="#087fbd"
-        stroke="#ffffff"
-        strokeWidth="5"
-        paintOrder="stroke"
-        fontFamily="DM Sans, Arial, system-ui, sans-serif"
-        fontSize="39"
-        fontStyle="italic"
-        fontWeight="800"
-        letterSpacing="8"
+        fill="#dff7ff"
+        fontFamily="Inter, system-ui, sans-serif"
+        fontSize="7"
+        fontWeight="700"
+        letterSpacing="1"
       >
-        más natural imposible
+        COSTOS
       </text>
     </svg>
   );
@@ -148,6 +100,30 @@ export default function App() {
       <main>
         <Active theme={theme} />
       </main>
+      <footer className="app-footer">
+        <span>Alvasu 2026</span>
+        <span aria-hidden="true">·</span>
+        <span>
+          Made with{" "}
+          <svg
+            className="footer-heart"
+            viewBox="0 0 1792 1792"
+            preserveAspectRatio="xMidYMid meet"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-label="love"
+            role="img"
+          >
+            <path
+              d="M896 1664q-26 0-44-18l-624-602q-10-8-27.5-26T145 952.5 77 855 23.5 734 0 596q0-220 127-344t351-124q62 0 126.5 21.5t120 58T820 276t76 68q36-36 76-68t95.5-68.5 120-58T1314 128q224 0 351 124t127 344q0 221-229 450l-623 600q-18 18-44 18z"
+              fill="#e25555"
+            />
+          </svg>{" "}
+          in Mexico by{" "}
+          <a href="https://www.dvleu.dev/" target="_blank" rel="noreferrer">
+            David Leon Salas AKA "Dvleu"
+          </a>
+        </span>
+      </footer>
     </div>
   );
 }

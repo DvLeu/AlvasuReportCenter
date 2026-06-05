@@ -11,7 +11,7 @@ INSUMOS = {
     "Jarabe Horchata": ("l", "garrafa", 5, 420),
     "Leche Clavel": ("l", "l", 1, 58),
     "Agua": ("l", "garrafón", 20, 35),
-    "Concentrado de Vainilla": ("l", "botella", 1, 95),
+    "Concentrado de Vainilla": ("ml", "botella", 500, 620),
     "Botella": ("pza", "caja", 100, 240),
     "Jamaica": ("kg", "kg", 1, 160),
     "Azúcar": ("kg", "costal", 50, 950),

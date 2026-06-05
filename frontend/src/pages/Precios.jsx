@@ -20,13 +20,20 @@ const UNIDADES_RECETA = [
 ];
 
 const UNIDADES_COMPRA = [
-  ...UNIDADES_RECETA,
+  { value: "botella", label: "Botella" },
+  { value: "frasco", label: "Frasco" },
+  { value: "lata", label: "Lata" },
   { value: "garrafón", label: "Garrafón" },
+  { value: "garrafa", label: "Garrafa" },
+  { value: "bidón", label: "Bidón" },
   { value: "costal", label: "Costal" },
+  { value: "cubeta", label: "Cubeta" },
   { value: "caja", label: "Caja" },
   { value: "paquete", label: "Paquete" },
   { value: "bolsa", label: "Bolsa" },
-  { value: "botella", label: "Botella" },
+  { value: "pza", label: "Pieza (pza)" },
+  { value: "kg", label: "Kilogramo a granel (kg)" },
+  { value: "l", label: "Litro a granel (l)" },
 ];
 
 function opcionesUnidad(insumos, campos, base) {
@@ -246,7 +253,7 @@ export default function Precios() {
 
   const activos = insumos.filter((i) => valorInsumo(i, "activa")).length;
   const opcionesReceta = opcionesUnidad(insumos, ["unidad"], UNIDADES_RECETA);
-  const opcionesCompra = opcionesUnidad(insumos, ["unidad_compra", "unidad"], UNIDADES_COMPRA);
+  const opcionesCompra = opcionesUnidad(insumos, ["unidad_compra"], UNIDADES_COMPRA);
 
   return (
     <section className="precios-page">
