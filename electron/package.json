@@ -6,6 +6,19 @@
   "scripts": {
     "start": "electron ."
   },
+  "build": {
+    "appId": "com.alvasu.reportcenter",
+    "productName": "Alvasu",
+    "mac": {
+      "icon": "assets/alvasu-logo.icns"
+    },
+    "win": {
+      "icon": "assets/alvasu-logo.ico"
+    },
+    "linux": {
+      "icon": "assets/alvasu-logo.png"
+    }
+  },
   "devDependencies": {
     "electron": "^31.0.0"
   }

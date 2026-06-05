@@ -87,7 +87,7 @@ main > section,
 .recipe-item,
 .insumo-card,
 .msg {
-  animation: quickFadeIn 0.3s ease-in both;
+  animation: quickFadeIn 0.5s ease-in both;
 }
 
 /* ---- Top bar ---- */
@@ -901,14 +901,18 @@ input.num:focus { outline: none; border-color: var(--accent); background: var(--
 
 /* ---- Metrics ---- */
 .metrics {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px; margin-bottom: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
 }
 .metric {
   background: var(--surface); border: 1px solid var(--line-soft);
   border-radius: 10px; padding: 18px 20px;
   display: flex; flex-direction: column; gap: 6px;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  overflow: hidden;
 }
 .metric-primary {
   border-color: rgba(15, 142, 199, 0.22);
@@ -921,16 +925,38 @@ input.num:focus { outline: none; border-color: var(--accent); background: var(--
   box-shadow: inset 4px 0 0 #2e9d4d, var(--shadow-sm);
 }
 
-.metric-label { font-size: 13px; color: var(--muted); }
+.metric-label { font-size: 13px; color: var(--muted); line-height: 1.3; }
 .metric-value {
-  font-family: "Fraunces", serif; font-weight: 600; font-size: 30px;
+  font-family: "Fraunces", serif; font-weight: 600;
+  font-size: clamp(24px, 4.4vw, 30px);
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
 }
 .metric-note {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 1180px) {
+  .metrics {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  }
+}
+
+@media (max-width: 460px) {
+  .metrics {
+    grid-template-columns: 1fr;
+  }
 }
 
 .result h3 {

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
+import { hoyISO } from "../date.js";
 
 const money = (v) => "$" + Number(v).toFixed(2);
-const hoyISO = () => new Date().toISOString().slice(0, 10);
 
 export default function Produccion() {
   const [recetas, setRecetas] = useState([]);

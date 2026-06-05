@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import createPlotlyComponent from "react-plotly.js/factory";
 import Plotly from "plotly.js-basic-dist-min";
 import { api } from "../api.js";
+import { hoyISO } from "../date.js";
 
 const Plot = createPlotlyComponent(Plotly);
 const moneyFormatter = new Intl.NumberFormat("en-US", {
@@ -13,7 +14,6 @@ const moneyFormatter = new Intl.NumberFormat("en-US", {
 const numberFormatter = new Intl.NumberFormat("en-US");
 const money = (v) => moneyFormatter.format(Number(v) || 0);
 const number = (v) => numberFormatter.format(Number(v) || 0);
-const hoyISO = () => new Date().toISOString().slice(0, 10);
 const mesISO = (fecha) => fecha.slice(0, 7);
 const anioISO = (fecha) => fecha.slice(0, 4);
 
@@ -101,7 +101,6 @@ export default function Dashboard({ theme = "light" }) {
     ? data.por_sabor.reduce((a, s) => a + (s.aguas ?? 0), 0)
     : 0;
   const costoPromedioAgua = aguasTotales > 0 ? data.total / aguasTotales : 0;
-  const ventaTotal = data?.venta_total ?? 0;
   const gananciaNeta = data?.ganancia_neta ?? 0;
 
   const diasHistorico = historico?.dias ?? [];
@@ -303,7 +302,6 @@ export default function Dashboard({ theme = "light" }) {
             <div className="metric metric-profit">
               <span className="metric-label">Ganancia neta</span>
               <span className="metric-value">{money(gananciaNeta)}</span>
-              <span className="metric-note">{money(ventaTotal)} venta - {money(data.total)} inversión</span>
             </div>
           </div>
 

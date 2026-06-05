@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../api.js";
+import { hoyISO } from "../date.js";
 
-const hoyISO = () => new Date().toISOString().slice(0, 10);
 const money = (v) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",

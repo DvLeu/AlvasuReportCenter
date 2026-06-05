@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title">
+  <title id="title">Alvasu</title>
+  <defs>
+    <linearGradient id="logoBg" x1="0" y1="0" x2="0" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#27a9df" />
+      <stop offset="0.5" stop-color="#cfe8f7" />
+      <stop offset="0.78" stop-color="#ffffff" />
+      <stop offset="1" stop-color="#fff7ba" />
+    </linearGradient>
+    <linearGradient id="letterFill" x1="160" y1="330" x2="860" y2="650" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#109bd5" />
+      <stop offset="0.55" stop-color="#087fbd" />
+      <stop offset="1" stop-color="#006aa6" />
+    </linearGradient>
+    <filter id="wordShadow" x="-12%" y="-18%" width="124%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#075d91" flood-opacity="0.28" />
+    </filter>
+  </defs>
+  <rect x="64" y="64" width="896" height="896" rx="124" fill="url(#logoBg)" />
+  <g filter="url(#wordShadow)">
+    <text
+      x="512"
+      y="505"
+      text-anchor="middle"
+      fill="url(#letterFill)"
+      stroke="#ffffff"
+      stroke-width="44"
+      paint-order="stroke"
+      font-family="Arial Black, Montserrat, system-ui, sans-serif"
+      font-size="188"
+      font-weight="900"
+      letter-spacing="2"
+    >Alvasu</text>
+  </g>
+  <text
+    x="512"
+    y="646"
+    text-anchor="middle"
+    fill="#087fbd"
+    stroke="#ffffff"
+    stroke-width="18"
+    paint-order="stroke"
+    font-family="DM Sans, Arial, system-ui, sans-serif"
+    font-size="58"
+    font-style="italic"
+    font-weight="800"
+    letter-spacing="8"
+  >más natural</text>
+</svg>
