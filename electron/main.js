@@ -47,6 +47,25 @@ function startVite() {
 
 function startFlask() {
   const backend = path.join(__dirname, "..", "backend");
+  const userData = app.getPath("userData");
+  const dbPath = path.join(userData, "aguas.db");
+  const env = {
+    ...process.env,
+    AGUAS_DB_PATH: dbPath,
+    AGUAS_DEBUG: DEV ? "1" : "0",
+  };
+
+  const packagedBackend =
+    process.platform === "win32"
+      ? path.join(process.resourcesPath, "backend", "aguas-backend.exe")
+      : path.join(process.resourcesPath, "backend", "aguas-backend");
+
+  if (!DEV && fs.existsSync(packagedBackend)) {
+    flask = spawn(packagedBackend, [], { stdio: "inherit", env });
+    flask.on("error", (e) => console.error("No se pudo iniciar Flask:", e));
+    return;
+  }
+
   const py = process.platform === "win32" ? "python" : "python3";
   const venvPy =
     process.platform === "win32"
@@ -54,8 +73,13 @@ function startFlask() {
       : path.join(backend, ".venv", "bin", "python3");
   const interp = fs.existsSync(venvPy) ? venvPy : py;
 
-  flask = spawn(interp, ["app.py"], { cwd: backend, stdio: "inherit" });
+  flask = spawn(interp, ["app.py"], { cwd: backend, stdio: "inherit", env });
   flask.on("error", (e) => console.error("No se pudo iniciar Flask:", e));
+}
+
+function frontendEntry() {
+  if (DEV) return path.join(__dirname, "..", "frontend", "dist", "index.html");
+  return path.join(process.resourcesPath, "frontend", "dist", "index.html");
 }
 
 function createWindow() {
@@ -72,7 +96,7 @@ function createWindow() {
   if (DEV) {
     win.loadURL("http://localhost:5173");
   } else {
-    win.loadFile(path.join(__dirname, "..", "frontend", "dist", "index.html"));
+    win.loadFile(frontendEntry());
   }
 }
 

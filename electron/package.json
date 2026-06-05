@@ -4,22 +4,54 @@
   "description": "Calculadora de costos de aguas frescas (escritorio)",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis --x64"
   },
   "build": {
     "appId": "com.alvasu.reportcenter",
     "productName": "Alvasu",
+    "files": [
+      "main.js",
+      "assets/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "frontend/dist"
+      },
+      {
+        "from": "../backend/dist/aguas-backend.exe",
+        "to": "backend/aguas-backend.exe"
+      }
+    ],
     "mac": {
       "icon": "assets/alvasu-logo.icns"
     },
     "win": {
-      "icon": "assets/alvasu-logo.ico"
+      "icon": "assets/alvasu-logo.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     },
     "linux": {
       "icon": "assets/alvasu-logo.png"
     }
   },
   "devDependencies": {
-    "electron": "^31.0.0"
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
   }
 }

@@ -1,50 +1,55 @@
 """
 Crea las tablas y carga el catalogo inicial de insumos y recetas.
-Ejecutar una sola vez:  python3 seed.py
+
+El seed normal es idempotente: solo carga datos cuando la base esta vacia.
+Para reiniciar todo manualmente usar: python seed.py --reset
 """
+import sys
+import os
 from datetime import date
 
 from models import db, Receta, Insumo, RecetaInsumo, PrecioInsumo, Config
 
 # Insumo -> (unidad_receta, unidad_compra, contenido_compra, precio_compra)
+# Precios iniciales aproximados en MXN para Mexico. Son editables desde la app.
 INSUMOS = {
-    "Jarabe Horchata": ("l", "garrafa", 5, 420),
-    "Leche Clavel": ("l", "l", 1, 58),
-    "Agua": ("l", "garrafón", 20, 35),
-    "Concentrado de Vainilla": ("ml", "botella", 500, 620),
-    "Botella": ("pza", "caja", 100, 240),
-    "Jamaica": ("kg", "kg", 1, 160),
-    "Azúcar": ("kg", "costal", 50, 950),
-    "Pulpa de Maracuya": ("kg", "cubeta", 5, 520),
-    "Limón": ("kg", "kg", 1, 38),
+    "Jarabe concentrado sabor horchata": ("l", "garrafa 5 l", 5, 450),
+    "Leche evaporada Carnation Clavel": ("l", "envase 1 l", 1, 65),
+    "Agua purificada": ("l", "garrafón 20 l", 20, 38),
+    "Concentrado de vainilla": ("ml", "botella 500 ml", 500, 120),
+    "Botella PET 500 ml con tapa": ("pza", "caja 100 pzas", 100, 320),
+    "Flor de jamaica seca": ("kg", "kg", 1, 180),
+    "Azúcar estándar": ("kg", "costal 50 kg", 50, 1250),
+    "Pulpa de maracuyá": ("kg", "cubeta 5 kg", 5, 650),
+    "Limón persa": ("kg", "kg", 1, 45),
 }
 
 # Receta -> (rendimiento_aguas_por_llenadora, volumen_llenadora_litros, {insumo: cantidad_por_llenadora})
 RECETAS = {
     "Horchata": (160, 80.0, {
-        "Jarabe Horchata": 4.0,
-        "Leche Clavel": 3.0,
-        "Agua": 72.0,
-        "Concentrado de Vainilla": 0.25,
-        "Botella": 160.0,
+        "Jarabe concentrado sabor horchata": 4.0,
+        "Leche evaporada Carnation Clavel": 3.0,
+        "Agua purificada": 72.0,
+        "Concentrado de vainilla": 0.25,
+        "Botella PET 500 ml con tapa": 160.0,
     }),
     "Jamaica": (160, 80.0, {
-        "Jamaica": 1.6,
-        "Agua": 80.0,
-        "Azúcar": 8.0,
-        "Botella": 160.0,
+        "Flor de jamaica seca": 1.6,
+        "Agua purificada": 80.0,
+        "Azúcar estándar": 8.0,
+        "Botella PET 500 ml con tapa": 160.0,
     }),
-    "Maracuya": (160, 80.0, {
-        "Pulpa de Maracuya": 8.0,
-        "Agua": 80.0,
-        "Azúcar": 6.0,
-        "Botella": 160.0,
+    "Maracuyá": (160, 80.0, {
+        "Pulpa de maracuyá": 8.0,
+        "Agua purificada": 80.0,
+        "Azúcar estándar": 6.0,
+        "Botella PET 500 ml con tapa": 160.0,
     }),
     "Limón": (160, 80.0, {
-        "Limón": 6.0,
-        "Agua": 80.0,
-        "Azúcar": 7.0,
-        "Botella": 160.0,
+        "Limón persa": 6.0,
+        "Agua purificada": 80.0,
+        "Azúcar estándar": 7.0,
+        "Botella PET 500 ml con tapa": 160.0,
     }),
 }
 
@@ -106,7 +111,22 @@ def seed_if_empty():
 
 
 def seed():
+    """Asegura tablas y carga el catalogo solo si aun no existe."""
+    os.environ["AGUAS_SKIP_AUTO_BOOTSTRAP"] = "1"
+    from app import app
+
+    with app.app_context():
+        db.create_all()
+        created = seed_if_empty()
+        if created:
+            print("Catalogo inicial creado.")
+        else:
+            print("La base ya tenia catalogo; no se modifico el seed.")
+
+
+def reset_seed():
     """Reinicia la base completa. Usar solo manualmente."""
+    os.environ["AGUAS_SKIP_AUTO_BOOTSTRAP"] = "1"
     from app import app
 
     with app.app_context():
@@ -114,8 +134,11 @@ def seed():
         db.create_all()
         cargar_catalogo_inicial()
         db.session.commit()
-        print("Base de datos creada y poblada con datos de ejemplo.")
+        print("Base de datos reiniciada y poblada con el catalogo inicial.")
 
 
 if __name__ == "__main__":
-    seed()
+    if "--reset" in sys.argv:
+        reset_seed()
+    else:
+        seed()

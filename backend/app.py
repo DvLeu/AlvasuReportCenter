@@ -34,9 +34,12 @@ from calc import calcular
 from seed import seed_if_empty
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DB_PATH = os.path.join(BASE, "aguas.db")
+DB_PATH = os.path.abspath(os.environ.get("AGUAS_DB_PATH", DEFAULT_DB_PATH))
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(BASE, "aguas.db")
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + DB_PATH
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 CORS(app)
@@ -91,7 +94,8 @@ def ensure_schema_and_migrations():
         seed_if_empty()
 
 
-ensure_schema_and_migrations()
+if os.environ.get("AGUAS_SKIP_AUTO_BOOTSTRAP") != "1":
+    ensure_schema_and_migrations()
 
 
 def get_config(clave, default=None):
@@ -720,4 +724,5 @@ def put_cfg():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    debug = os.environ.get("AGUAS_DEBUG") == "1"
+    app.run(host="127.0.0.1", port=5000, debug=debug)

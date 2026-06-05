@@ -26,8 +26,16 @@ cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python3 seed.py        # crea la base y carga datos de ejemplo (una sola vez)
+python3 seed.py        # carga el catalogo solo si la base esta vacia
 python3 app.py         # corre la API en http://127.0.0.1:5000
+```
+
+El seed se ejecuta automaticamente al iniciar la API y solo carga datos la primera
+vez que no existe catalogo. Si necesitas reiniciar toda la base manualmente:
+
+```bash
+cd backend
+python3 seed.py --reset
 ```
 
 ## 2. Frontend (React)
@@ -60,6 +68,22 @@ AGUAS_DEV=1 npm start               # terminal B
 cd frontend && npm run build        # genera frontend/dist
 cd ../electron && npm install && npm start
 ```
+
+## 4. Instalador para Windows
+
+Para entregar la app a una PC Windows limpia, genera un instalador NSIS. El
+instalador incluye Electron, el frontend compilado y el backend Flask convertido
+a `aguas-backend.exe`; el usuario final no necesita instalar Python ni Node.
+
+En Windows, desde PowerShell:
+
+```powershell
+.\scripts\build-windows.ps1
+```
+
+El instalador queda en `electron\dist`. La base SQLite se guarda en la carpeta de
+datos de usuario de Windows, no dentro de Archivos de programa, para que la app
+pueda escribir precios, recetas y produccion sin permisos especiales.
 
 ## Qué hace cada parte
 
