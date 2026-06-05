@@ -111,7 +111,7 @@ export default function Recetas() {
     };
 
     if (!payload.nombre || !payload.rendimiento_vasos) {
-      setMsg({ tipo: "error", texto: "Nombre y rendimiento son obligatorios." });
+      setMsg({ tipo: "error", texto: "Falta nombre o rendimiento." });
       return;
     }
 
@@ -123,9 +123,7 @@ export default function Recetas() {
       .then((saved) => {
         setMsg({
           tipo: "ok",
-          texto: form.id
-            ? "Receta actualizada correctamente."
-            : "Receta creada correctamente.",
+          texto: form.id ? "Receta guardada." : "Receta creada.",
         });
         setForm(formFromReceta(saved));
         cargar();
@@ -140,7 +138,7 @@ export default function Recetas() {
         if (form.id === receta.id) {
           nuevo();
         }
-        setMsg({ tipo: "ok", texto: `"${receta.nombre}" fue desactivada.` });
+        setMsg({ tipo: "ok", texto: `"${receta.nombre}" desactivada.` });
         cargar();
       })
       .catch(() => setMsg({ tipo: "error", texto: "No se pudo desactivar." }));
@@ -160,7 +158,7 @@ export default function Recetas() {
     api
       .actualizarReceta(receta.id, payload)
       .then(() => {
-        setMsg({ tipo: "ok", texto: `"${receta.nombre}" fue activada.` });
+        setMsg({ tipo: "ok", texto: `"${receta.nombre}" activada.` });
         cargar();
       })
       .catch(() => setMsg({ tipo: "error", texto: "No se pudo activar." }));
@@ -173,7 +171,7 @@ export default function Recetas() {
       <div className="page-head">
         <div>
           <h2>Recetas</h2>
-          <p className="muted">Alta y edición de sabores e insumos por llenadora. 1 llenadora = 160 aguas.</p>
+          <p className="muted">Sabores, rendimiento e ingredientes.</p>
         </div>
         <button className="btn" onClick={nuevo}>
           Nueva receta
@@ -192,7 +190,7 @@ export default function Recetas() {
                 <div>
                   <strong>{receta.nombre}</strong>
                   <div className="muted">
-                    {receta.rendimiento_aguas ?? receta.rendimiento_vasos} aguas · {receta.insumos.length} insumo(s)
+                    {receta.rendimiento_aguas ?? receta.rendimiento_vasos} aguas por llenadora · {receta.insumos.length} insumo(s)
                   </div>
                 </div>
                 <div className="recipe-actions">
@@ -217,7 +215,7 @@ export default function Recetas() {
         <div className="card recipe-form-card">
           <div className="card-title-row">
             <h3>{form.id ? "Editar receta" : "Nueva receta"}</h3>
-            <span className="muted">Los costos siguen entrando en Precios.</span>
+            <span className="muted">Los precios se toman de Insumos.</span>
           </div>
 
           <div className="field-grid">
@@ -231,7 +229,7 @@ export default function Recetas() {
               />
             </label>
             <label>
-              Rendimiento (aguas por llenadora)
+              Aguas por llenadora
               <input
                 type="number"
                 min="1"
@@ -241,7 +239,7 @@ export default function Recetas() {
               />
             </label>
             <label>
-              Volumen de llenadora (L)
+              Volumen llenadora (L)
               <input
                 type="number"
                 min="0"
@@ -288,7 +286,7 @@ export default function Recetas() {
                       </select>
                     </label>
                     <label>
-                      Cantidad por llenadora {insumo ? `(${insumo.unidad})` : ""}
+                      Cantidad {insumo ? `(${insumo.unidad})` : ""}
                       <input
                         type="number"
                         min="0"
@@ -310,7 +308,7 @@ export default function Recetas() {
 
           <div className="actions">
             <span className="muted">
-              {form.id ? "Edita y guarda los cambios." : "Crea una receta nueva."}
+              {form.id ? "Editando receta." : "Nueva receta."}
             </span>
             <button className="btn primary" onClick={guardar}>
               {form.id ? "Guardar cambios" : "Crear receta"}

@@ -91,7 +91,7 @@ export default function Precios() {
         setCargando(false);
       })
       .catch(() => {
-        setMsg({ tipo: "error", texto: "No se pudo conectar con el servidor." });
+        setMsg({ tipo: "error", texto: "No se pudo cargar la información." });
         setCargando(false);
       });
   }
@@ -173,11 +173,11 @@ export default function Precios() {
 
   function guardar() {
     if (fecha > hoyISO()) {
-      setMsg({ tipo: "error", texto: "No se pueden guardar precios con fecha futura." });
+      setMsg({ tipo: "error", texto: "La fecha no puede ser futura." });
       return;
     }
     if (cambiosPrecio.length === 0 && cambiosInsumo.length === 0) {
-      setMsg({ tipo: "info", texto: "No hay cambios por guardar." });
+      setMsg({ tipo: "info", texto: "No hay cambios." });
       return;
     }
 
@@ -201,16 +201,16 @@ export default function Precios() {
       .then(() => {
         setMsg({
           tipo: "ok",
-          texto: `${cambiosPrecio.length} precio(s) y ${cambiosInsumo.length} insumo(s) actualizados. Los precios aplican desde ${fecha}.`,
+          texto: `Guardado. Los precios aplican desde ${fecha}.`,
         });
         cargar();
       })
-      .catch(() => setMsg({ tipo: "error", texto: "Error al guardar." }));
+      .catch(() => setMsg({ tipo: "error", texto: "No se pudo guardar." }));
   }
 
   function guardarNuevoInsumo() {
     if (fecha > hoyISO()) {
-      setMsg({ tipo: "error", texto: "No se pueden agregar insumos con fecha futura." });
+      setMsg({ tipo: "error", texto: "La fecha no puede ser futura." });
       return;
     }
     const payload = {
@@ -223,16 +223,16 @@ export default function Precios() {
       activa: true,
     };
     if (!payload.nombre || !payload.unidad || !payload.unidad_compra || payload.factor_conversion <= 0) {
-      setMsg({ tipo: "error", texto: "Nombre, unidades y contenido son obligatorios." });
+      setMsg({ tipo: "error", texto: "Faltan nombre, unidades o contenido." });
       return;
     }
     api
       .crearInsumo(payload)
       .then(() => {
-        setMsg({ tipo: "ok", texto: `"${payload.nombre}" fue agregado al catálogo.` });
+        setMsg({ tipo: "ok", texto: `"${payload.nombre}" agregado.` });
         cargar();
       })
-      .catch(() => setMsg({ tipo: "error", texto: "No se pudo agregar el insumo." }));
+      .catch(() => setMsg({ tipo: "error", texto: "No se pudo agregar." }));
   }
 
   function cambiarActivo(insumo, activa) {
@@ -242,7 +242,7 @@ export default function Precios() {
     }));
   }
 
-  if (cargando) return <p className="muted">Cargando precios…</p>;
+  if (cargando) return <p className="muted">Cargando insumos...</p>;
 
   const activos = insumos.filter((i) => valorInsumo(i, "activa")).length;
   const opcionesReceta = opcionesUnidad(insumos, ["unidad"], UNIDADES_RECETA);
@@ -252,12 +252,12 @@ export default function Precios() {
     <section className="precios-page">
       <div className="page-head">
         <div>
-          <h2>Precios de insumos</h2>
-          <p className="muted">Configura compra, contenido y precio real para calcular cada receta.</p>
+          <h2>Insumos</h2>
+          <p className="muted">Precios, unidades y contenido de compra.</p>
         </div>
         <div className="page-tools">
           <label className="date-field">
-            Fecha de vigencia
+            Vigente desde
             <input
               type="date"
               value={fecha}
@@ -284,11 +284,11 @@ export default function Precios() {
 
       <div className="conversion-guide">
         <div className="conversion-rule">
-          <span className="eyebrow">Regla de cálculo</span>
-          <h3>Precio para receta = precio de compra / contenido comprado</h3>
+          <span className="eyebrow">Cálculo</span>
+          <h3>Precio de receta = precio de compra / contenido</h3>
           <p>
-            El contenido se captura en la misma unidad que usas en recetas. Así un garrafón, costal
-            o caja se convierte automáticamente al costo por litro, kilo, mililitro o pieza.
+            Captura cuánto trae cada compra. El sistema calcula el costo por litro, kilo,
+            mililitro o pieza.
           </p>
         </div>
         <div className="conversion-examples">
@@ -298,9 +298,9 @@ export default function Precios() {
             <small>$30 / 20 = $1.50 por l</small>
           </div>
           <div>
-            <span>Si receta usa ml</span>
+            <span>Receta en ml</span>
             <strong>Contenido 20000 ml</strong>
-            <small>450 ml se calculan con precio por ml</small>
+            <small>450 ml usan precio por ml</small>
           </div>
           <div>
             <span>Azúcar</span>
@@ -323,25 +323,25 @@ export default function Precios() {
               />
             </label>
             <label>
-              Unidad en receta
+              Unidad de receta
               <UnidadSelect
                 value={nuevoInsumo.unidad}
                 options={opcionesReceta}
-                placeholder="Selecciona unidad"
+                placeholder="Unidad"
                 onChange={(unidad) => setNuevoInsumo((prev) => ({ ...prev, unidad }))}
               />
             </label>
             <label>
-              Unidad al comprar
+              Unidad de compra
               <UnidadSelect
                 value={nuevoInsumo.unidad_compra}
                 options={opcionesCompra}
-                placeholder="Selecciona compra"
+                placeholder="Compra"
                 onChange={(unidad_compra) => setNuevoInsumo((prev) => ({ ...prev, unidad_compra }))}
               />
             </label>
             <label>
-              Contenido en unidad de receta
+              Contenido
               <input
                 type="number"
                 min="0.0001"
@@ -375,7 +375,7 @@ export default function Precios() {
           <div>
             <h3>Catálogo de insumos</h3>
             <p className="muted">
-              {insumos.length} insumo(s), {activos} activo(s). Desactiva lo que ya no debe aparecer en recetas.
+              {insumos.length} insumo(s), {activos} activo(s).
             </p>
           </div>
           <span className="summary-pill">
@@ -407,7 +407,7 @@ export default function Precios() {
               >
                 <div className="insumo-card-head">
                   <label className="insumo-name-field">
-                    Nombre del insumo
+                    Insumo
                     <input
                       type="text"
                       value={valorInsumo(i, "nombre")}
@@ -440,13 +440,13 @@ export default function Precios() {
                     <span className="eq-val">
                       {money(precioConvertido(i))} <small>/ {unidadUso || "unidad"}</small>
                     </span>
-                    <span className="eq-lbl">costo en receta</span>
+                    <span className="eq-lbl">precio para receta</span>
                   </div>
                 </div>
 
                 <div className="insumo-config">
                   <div className="compra-sentence">
-                    <span className="cs-text">Compras 1</span>
+                    <span className="cs-text">Compra 1</span>
                     <UnidadSelect
                       value={unidadCompra}
                       options={opcionesCompra}
@@ -466,7 +466,7 @@ export default function Precios() {
                         }
                       />
                     </span>
-                    <span className="cs-text">y rinde</span>
+                    <span className="cs-text">rinde</span>
                     <input
                       className="cs-qty"
                       type="number"
@@ -485,7 +485,7 @@ export default function Precios() {
                 </div>
 
                 <div className="insumo-card-foot">
-                  <span className="muted">Vigente desde {i.vigente_desde || "—"}</span>
+                  <span className="muted">Desde {i.vigente_desde || "—"}</span>
                   {cambiado ? (
                     <span className="badge warn">modificado</span>
                   ) : !i.activa ? (
@@ -503,7 +503,7 @@ export default function Precios() {
       <div className="actions">
         <span className="muted">
           {cambiosPrecio.length === 0 && cambiosInsumo.length === 0
-            ? "Sin cambios por guardar"
+            ? "Sin cambios"
             : `${cambiosPrecio.length} precio(s), ${cambiosInsumo.length} insumo(s) modificado(s)`}
         </span>
         <button className="btn primary" onClick={guardar}>

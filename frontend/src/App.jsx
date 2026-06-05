@@ -8,7 +8,7 @@ const TABS = [
   { id: "precios", label: "Insumos", comp: Precios },
   { id: "recetas", label: "Recetas", comp: Recetas },
   { id: "produccion", label: "Producción", comp: Produccion },
-  { id: "dashboard", label: "Dashboard", comp: Dashboard },
+  { id: "dashboard", label: "Resumen", comp: Dashboard },
 ];
 
 function AlvasuLogo() {
@@ -117,7 +117,7 @@ export default function App() {
           <AlvasuLogo />
           <div>
             <h1>Alvasu</h1>
-            <p>Calculadora de costos</p>
+            <p>Control de costos</p>
           </div>
         </div>
         <div className="topbar-actions">
@@ -137,7 +137,7 @@ export default function App() {
             type="button"
             onClick={toggleTheme}
             aria-pressed={theme === "dark"}
-            aria-label={theme === "dark" ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+            aria-label={theme === "dark" ? "Usar modo claro" : "Usar modo oscuro"}
             title={theme === "dark" ? "Modo claro" : "Modo oscuro"}
           >
             <span className="theme-toggle-icon" aria-hidden="true" />

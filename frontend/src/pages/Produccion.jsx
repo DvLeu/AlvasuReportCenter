@@ -16,7 +16,7 @@ export default function Produccion() {
       .recetas()
       .then(setRecetas)
       .catch(() =>
-        setMsg({ tipo: "error", texto: "No se pudieron cargar las recetas." })
+        setMsg({ tipo: "error", texto: "No se pudieron cargar los sabores." })
       );
   }, []);
 
@@ -28,31 +28,31 @@ export default function Produccion() {
 
   function registrar() {
     if (fecha > hoyISO()) {
-      setMsg({ tipo: "error", texto: "No se puede registrar producción en fechas futuras." });
+      setMsg({ tipo: "error", texto: "La fecha no puede ser futura." });
       return;
     }
     const items = recetas
       .map((r) => ({ receta_id: r.id, aguas: Number(aguas[r.id]) || 0 }))
       .filter((it) => it.aguas > 0);
     if (items.length === 0) {
-      setMsg({ tipo: "info", texto: "Captura al menos una cantidad de aguas." });
+      setMsg({ tipo: "info", texto: "Captura al menos una cantidad." });
       return;
     }
     api
       .registrarProduccion(fecha, items)
       .then((d) => {
         setResultado(d);
-        setMsg({ tipo: "ok", texto: "Producción registrada y costo sellado." });
+        setMsg({ tipo: "ok", texto: "Producción guardada." });
       })
-      .catch(() => setMsg({ tipo: "error", texto: "Error al registrar." }));
+      .catch(() => setMsg({ tipo: "error", texto: "No se pudo guardar." }));
   }
 
   return (
     <section>
       <div className="page-head">
         <div>
-          <h2>Captura diaria</h2>
-          <p className="muted">Captura la cantidad de aguas preparadas por sabor.</p>
+          <h2>Producción</h2>
+          <p className="muted">Aguas preparadas por sabor.</p>
         </div>
         <label className="date-field">
           Fecha
@@ -70,8 +70,8 @@ export default function Produccion() {
           <thead>
             <tr>
               <th>Sabor</th>
-              <th>Receta base</th>
-              <th className="right">Aguas vendidas</th>
+              <th>Rendimiento</th>
+              <th className="right">Aguas</th>
             </tr>
           </thead>
           <tbody>
@@ -100,10 +100,10 @@ export default function Produccion() {
 
       <div className="actions">
         <span className="muted">
-          El costo se calcula con los precios vigentes de la fecha.
+          Usa los precios vigentes de la fecha.
         </span>
         <button className="btn primary" onClick={registrar}>
-          Registrar y calcular
+          Guardar producción
         </button>
       </div>
 
@@ -111,7 +111,7 @@ export default function Produccion() {
 
       {resultado?.advertencias?.length > 0 && (
         <div className="msg warn">
-          <strong>No se pudo calcular un costo real.</strong>
+          <strong>Faltan datos para calcular.</strong>
           <ul className="warning-list">
             {resultado.advertencias.slice(0, 8).map((texto, idx) => (
               <li key={idx}>{texto}</li>
@@ -126,7 +126,7 @@ export default function Produccion() {
       {resultado && (
         <div className="card result">
           <h3>
-            Resultado · {resultado.fecha} ·{" "}
+            Producción guardada · {resultado.fecha} ·{" "}
             {resultado.modo_costeo === "LLENADORAS_COMPLETAS"
               ? "por cantidad de aguas"
               : "proporcional"}
