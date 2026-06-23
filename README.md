@@ -1,108 +1,221 @@
-# Calculadora de costos de aguas frescas
+# Aguas Frescas Cost Calculator
 
-MVP con **React** (frontend) + **Flask** (backend, Python) + **SQLite** + **Electron** (escritorio).
+Aguas Frescas Cost Calculator is a local desktop and browser app for tracking ingredient prices, recording daily production, and reviewing the cost of each agua fresca flavor.
 
-El cálculo de costos vive en el backend, así que es el mismo sin importar la base de
-datos. Empieza con SQLite local y se puede migrar a PostgreSQL en la nube sin tocar la lógica.
+The app uses a React interface, a Flask API, SQLite for local storage, and Electron for the desktop build. Cost calculations live in the backend, so browser and desktop runs use the same logic.
 
-## Estructura
+## Project Structure
 
-```
+```text
 aguas-costos/
-├── backend/     API Flask + SQLite + lógica de cálculo
-├── frontend/    React + Vite (UI)
-└── electron/    Envoltura de escritorio
+├── backend/     Flask API, SQLite database, and cost logic
+├── frontend/    React + Vite interface
+├── electron/    Desktop shell and packaging settings
+└── scripts/     Build scripts
 ```
 
-## Requisitos (Linux)
+## Requirements
 
-- Python 3.10+
-- Node.js 18+ y npm
+- Python 3.10 or newer
+- Node.js 18 or newer
+- npm
 
-## 1. Backend (Flask)
+## Run the Backend
 
 ```bash
 cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python3 seed.py        # carga el catalogo solo si la base esta vacia
-python3 app.py         # corre la API en http://127.0.0.1:5000
+python3 seed.py
+python3 app.py
 ```
 
-El seed se ejecuta automaticamente al iniciar la API y solo carga datos la primera
-vez que no existe catalogo. Si necesitas reiniciar toda la base manualmente:
+The API runs at `http://127.0.0.1:5000`.
+
+`seed.py` loads the starter catalog only when the database is empty. To reset the database and load the starter data again:
 
 ```bash
 cd backend
 python3 seed.py --reset
 ```
 
-## 2. Frontend (React)
+## Run the Frontend
+
+In a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` while the backend is running.
+
+## Run the Desktop App
+
+Development mode uses the Vite server:
+
+```bash
+cd frontend
+npm run dev
+```
+
+```bash
+cd electron
+npm install
+AGUAS_DEV=1 npm start
+```
+
+Production mode uses the compiled frontend:
+
+```bash
+cd frontend
+npm run build
+cd ../electron
+npm install
+npm start
+```
+
+## Build the Windows Installer
+
+From PowerShell on Windows:
+
+```powershell
+.\scripts\build-windows.ps1
+```
+
+The installer is created in `electron\dist`. It includes Electron, the compiled frontend, and the Flask backend packaged as `aguas-backend.exe`, so the target computer does not need Python or Node.js installed.
+
+The SQLite database is stored in the user's Windows data folder, not inside Program Files. This allows the app to save prices, recipes, and production records without administrator permissions.
+
+## Main Features
+
+- **Prices**: update ingredient prices by kilogram. Only changed prices create a new history entry.
+- **Production**: record daily production by flavor. Costs are calculated with the prices active on that date and saved with the record.
+- **Dashboard**: review total cost and cost by flavor for a selected date.
+
+## Costing Mode
+
+The `modo_costeo` key in the `configuracion` table accepts two values:
+
+- `JARRAS_COMPLETAS`: rounds production to full pitchers and reflects actual ingredient use. This is the default mode.
+- `PROPORCIONAL`: calculates the exact theoretical cost per serving.
+
+To change the mode, send a `PUT /api/config` request:
+
+```json
+{"modo_costeo": "PROPORCIONAL"}
+```
+
+---
+
+# Calculadora de costos de aguas frescas
+
+Calculadora de costos de aguas frescas es una app local de escritorio y navegador para administrar precios de insumos, capturar producción diaria y revisar el costo de cada sabor.
+
+La app usa una interfaz en React, una API en Flask, SQLite como almacenamiento local y Electron para la versión de escritorio. Los cálculos de costos viven en el backend, así que el navegador y la app de escritorio usan la misma lógica.
+
+## Estructura del proyecto
+
+```text
+aguas-costos/
+├── backend/     API Flask, base SQLite y lógica de costos
+├── frontend/    Interfaz React + Vite
+├── electron/    Envoltura de escritorio y configuración de empaquetado
+└── scripts/     Scripts de build
+```
+
+## Requisitos
+
+- Python 3.10 o superior
+- Node.js 18 o superior
+- npm
+
+## Ejecutar el backend
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python3 seed.py
+python3 app.py
+```
+
+La API queda disponible en `http://127.0.0.1:5000`.
+
+`seed.py` carga el catálogo inicial solo cuando la base está vacía. Para reiniciar la base y volver a cargar los datos iniciales:
+
+```bash
+cd backend
+python3 seed.py --reset
+```
+
+## Ejecutar el frontend
 
 En otra terminal:
 
 ```bash
 cd frontend
 npm install
-npm run dev            # http://localhost:5173
+npm run dev
 ```
 
-Con el backend y el frontend corriendo, ya puedes usar la app en el navegador.
+Abre `http://localhost:5173` mientras el backend está corriendo.
 
-## 3. Escritorio (Electron)
+## Ejecutar la app de escritorio
 
-Electron levanta el backend solo y muestra la app en una ventana.
-
-**Modo desarrollo** (usa el servidor de Vite; deja `npm run dev` corriendo):
+El modo desarrollo usa el servidor de Vite:
 
 ```bash
-cd frontend && npm run dev          # terminal A
-cd electron && npm install
-AGUAS_DEV=1 npm start               # terminal B
+cd frontend
+npm run dev
 ```
-
-**Modo producción** (empaqueta el frontend; no necesita Vite corriendo):
 
 ```bash
-cd frontend && npm run build        # genera frontend/dist
-cd ../electron && npm install && npm start
+cd electron
+npm install
+AGUAS_DEV=1 npm start
 ```
 
-## 4. Instalador para Windows
+El modo producción usa el frontend compilado:
 
-Para entregar la app a una PC Windows limpia, genera un instalador NSIS. El
-instalador incluye Electron, el frontend compilado y el backend Flask convertido
-a `aguas-backend.exe`; el usuario final no necesita instalar Python ni Node.
+```bash
+cd frontend
+npm run build
+cd ../electron
+npm install
+npm start
+```
 
-En Windows, desde PowerShell:
+## Crear el instalador de Windows
+
+Desde PowerShell en Windows:
 
 ```powershell
 .\scripts\build-windows.ps1
 ```
 
-El instalador queda en `electron\dist`. La base SQLite se guarda en la carpeta de
-datos de usuario de Windows, no dentro de Archivos de programa, para que la app
-pueda escribir precios, recetas y produccion sin permisos especiales.
+El instalador se crea en `electron\dist`. Incluye Electron, el frontend compilado y el backend Flask empaquetado como `aguas-backend.exe`, así que la computadora destino no necesita tener Python ni Node.js instalados.
 
-## Qué hace cada parte
+La base SQLite se guarda en la carpeta de datos del usuario de Windows, no dentro de Archivos de programa. Así la app puede guardar precios, recetas y registros de producción sin permisos de administrador.
 
-- **Precios**: editar el precio por kilo de cada insumo. Solo los que cambian generan
-  un registro nuevo en el historial; los demás conservan su precio y su fecha.
-- **Producción**: capturar las aguas por sabor del día. El costo se calcula con los
-  precios vigentes de esa fecha y se guarda congelado.
-- **Dashboard**: costo total y por sabor de una fecha.
+## Funciones principales
+
+- **Precios**: actualiza precios de insumos por kilogramo. Solo los cambios crean una entrada nueva en el historial.
+- **Producción**: registra la producción diaria por sabor. Los costos se calculan con los precios vigentes de esa fecha y se guardan con el registro.
+- **Dashboard**: muestra el costo total y el costo por sabor de una fecha seleccionada.
 
 ## Modo de costeo
 
-En la tabla `configuracion`, la clave `modo_costeo` admite:
+La clave `modo_costeo` en la tabla `configuracion` acepta dos valores:
 
-- `JARRAS_COMPLETAS`: redondea a jarras enteras (gasto real de insumos). *(por defecto)*
-- `PROPORCIONAL`: costo exacto por vaso (análisis teórico).
+- `JARRAS_COMPLETAS`: redondea la producción a jarras completas y refleja el consumo real de insumos. Es el modo predeterminado.
+- `PROPORCIONAL`: calcula el costo teórico exacto por vaso.
 
-Se puede cambiar con `PUT /api/config` enviando `{"modo_costeo": "PROPORCIONAL"}`.
+Para cambiar el modo, envía una petición `PUT /api/config`:
 
-## Migrar a PostgreSQL (cuando quieras la versión web)
-
-Cambia la línea `SQLALCHEMY_DATABASE_URI` en `backend/app.py` por la cadena de
-PostgreSQL (e instala `psycopg2-binary`). El resto del código no cambia.
+```json
+{"modo_costeo": "PROPORCIONAL"}
+```
